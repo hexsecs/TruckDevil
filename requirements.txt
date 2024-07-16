@@ -1,4 +1,4 @@
 pyserial>=3.5
 python-can>=3.3.4
 dill>=0.3.4
-setuptools>=57.0.0
+setuptools>=70.0.0
