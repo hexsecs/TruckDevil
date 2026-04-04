@@ -916,14 +916,12 @@ class FuzzerCommands(Command):
 
         return
 
-    @staticmethod
     def do_back(self, arg=None):
         """
         Return to the main menu
         """
         return True
 
-    @staticmethod
     def do_EOF(self, arg=None):
         """
         Following a ctrl-d quit the whole program
