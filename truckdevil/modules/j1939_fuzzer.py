@@ -361,7 +361,7 @@ class J1939Fuzzer:
 
         data = test_case_values.setdefault("data", None)
         if data is None:
-            if 2 < option < 0:
+            if not (0 <= option <= 2):
                 option = random.randint(0, 2)
             if option == 0:
                 data = ''
@@ -488,7 +488,7 @@ class J1939Fuzzer:
                     anomaly = True
                     any_anomalies = True
                     message = "new PGNs detected from target: " + str(
-                            set(self.baseline[src]['pgns'].keys()) - set(after_fuzz[src]['pgns']))
+                            set(after_fuzz[src]['pgns'].keys()) - set(self.baseline[src]['pgns']))
                 if anomaly:
                     print("\n    source: " + str(src))
                     print("        interval messages/second: " + str(curr_per_sec))
