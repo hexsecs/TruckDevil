@@ -378,19 +378,23 @@ def test_save_data_collected_writes_file(j1939_interface, tmp_path):
     assert "0CEC000B" in content
 
 
-def test_import_data_collected_known_limitation(j1939_interface, tmp_path):
-    """import_data_collected can't parse current __str__ format (has timestamp prefix).
-    This documents the known TODO in the source. The parser expects 8 parts but
-    __str__ now outputs 9 (timestamp + original fields).
-    """
-    messages = [J1939Message(0x18EA00FF, "AABBCCDDEEFF0011")]
-    messages[0].timestamp = 1.0
+def test_import_data_collected_roundtrip(j1939_interface, tmp_path):
+    """save_data_collected then import_data_collected round-trips CAN ID and data."""
+    messages = [
+        J1939Message(0x18EA00FF, "AABBCCDDEEFF0011"),
+        J1939Message(0x0CEC000B, "1122334455667788"),
+    ]
+    for m in messages:
+        m.timestamp = 1.0
     f = tmp_path / "test_log2.txt"
     j1939_interface.save_data_collected(messages, file_name=str(f))
 
     imported = j1939_interface.import_data_collected(str(f))
-    # Known bug: returns empty because __str__ format doesn't match the parser
-    assert imported == []
+    assert len(imported) == 2
+    assert imported[0].can_id == 0x18EA00FF
+    assert imported[0].data.upper() == "AABBCCDDEEFF0011"
+    assert imported[1].can_id == 0x0CEC000B
+    assert imported[1].data.upper() == "1122334455667788"
 
 
 def test_save_data_collected_empty_raises(j1939_interface, tmp_path):
