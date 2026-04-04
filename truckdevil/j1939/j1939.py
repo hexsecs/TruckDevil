@@ -1236,101 +1236,94 @@ class MessageManagement:
             self._uds_conversations = []
 
     def find_full_multipacket_message(self):
-        self._lock_conversations.acquire()
-        for i in range(0, len(self._conversations)):
-            # Found one ready to send - return it
-            if self._conversations[i].readyToSend:
-                message = self._conversations[i].completeMessage
-                del self._conversations[i]
-                self._lock_conversations.release()
-                return message
-        self._lock_conversations.release()
+        with self._lock_conversations:
+            for i in range(0, len(self._conversations)):
+                # Found one ready to send - return it
+                if self._conversations[i].readyToSend:
+                    message = self._conversations[i].completeMessage
+                    del self._conversations[i]
+                    return message
 
     def find_full_isotp_message(self):
-        self._lock_uds_conversations.acquire()
-        for i in range(0, len(self._uds_conversations)):
-            # Found one ready to send - return it
-            if self._uds_conversations[i].readyToSend:
-                message = self._uds_conversations[i].completeMessage
-                del self._uds_conversations[i]
-                self._lock_uds_conversations.release()
-                return message
-        self._lock_uds_conversations.release()
+        with self._lock_uds_conversations:
+            for i in range(0, len(self._uds_conversations)):
+                # Found one ready to send - return it
+                if self._uds_conversations[i].readyToSend:
+                    message = self._uds_conversations[i].completeMessage
+                    del self._uds_conversations[i]
+                    return message
 
     def add_new_conversation(self, message):
         with self._lock_conversations:
             self._conversations.append(message)
 
     def add_to_existing_conversation(self, message):
-        # Find the correct conversation
-        self._lock_conversations.acquire()
-        for i in range(0, len(self._conversations)):
-            # Correct conversation found
-            if self._conversations[i].src_addr == message.src_addr \
-                    and self._conversations[i].dst_addr == message.pdu_specific:
-                self._conversations[i].received_packets += 1
-                # Received all the packets
-                if self._conversations[i].complete:
-                    bytes_left = (self._conversations[i].num_bytes - self._conversations[i].received_bytes)
-                    self._conversations[i].received_bytes += bytes_left
-                    data_index = (bytes_left * 2) + 2
-                    # Copy final bytes
-                    self._conversations[i].completeMessage.data += message.data[2:data_index]
-                    # Ready to send next time a message is read
-                    self._conversations[i].readyToSend = True
-                    # More packets needed, add 7 bytes of data to stored message
-                else:
-                    self._conversations[i].received_bytes += 7
-                    # Skip first byte, this is counter
-                    self._conversations[i].completeMessage.data += message.data[2:16]
-                break
-        self._lock_conversations.release()
+        with self._lock_conversations:
+            for i in range(0, len(self._conversations)):
+                # Correct conversation found
+                if self._conversations[i].src_addr == message.src_addr \
+                        and self._conversations[i].dst_addr == message.pdu_specific:
+                    self._conversations[i].received_packets += 1
+                    # Received all the packets
+                    if self._conversations[i].complete:
+                        bytes_left = (self._conversations[i].num_bytes - self._conversations[i].received_bytes)
+                        self._conversations[i].received_bytes += bytes_left
+                        data_index = (bytes_left * 2) + 2
+                        # Copy final bytes
+                        self._conversations[i].completeMessage.data += message.data[2:data_index]
+                        # Ready to send next time a message is read
+                        self._conversations[i].readyToSend = True
+                        # More packets needed, add 7 bytes of data to stored message
+                    else:
+                        self._conversations[i].received_bytes += 7
+                        # Skip first byte, this is counter
+                        self._conversations[i].completeMessage.data += message.data[2:16]
+                    break
 
     def add_new_isotp_conversation(self, message):
         with self._lock_uds_conversations:
             self._uds_conversations.append(message)
 
     def add_to_existing_isotp_conversation(self, message):
-        self._lock_uds_conversations.acquire()
-        for i in range(0, len(self._uds_conversations)):
-            # Correct UDS message
-            if self._uds_conversations[i].completeMessage.src_addr == message.src_addr and \
-                    self._uds_conversations[i].completeMessage.dst_addr == message.dst_addr:
-                # The index of this received message
-                index_byte = int(message.data[1:2], 16)
-                # Correct order of data received
-                if index_byte == self._uds_conversations[i].nextExpectedIndex:
-                    # Received all data bytes (including the current packet)
-                    if self._uds_conversations[i].complete(curr_received=7):
-                        bytes_left = (
-                                self._uds_conversations[i].num_bytes -
-                                self._uds_conversations[i].received_bytes
-                        )
-                        self._uds_conversations[i].received_bytes += bytes_left
-                        data_index = int((bytes_left * 2) + 2)
-                        # Copy final bytes
-                        self._uds_conversations[i].completeMessage.data += message.data[2:data_index]
-                        self._uds_conversations[i].completeMessage.total_bytes = (
-                                len(self._uds_conversations[i].completeMessage.data) / 2
-                        )
-                        # Ready to send next time a message is read
-                        self._uds_conversations[i].readyToSend = True
-                        # More packets needed, add 7 bytes of data
-                    # to stored message
-                    else:
-                        self._uds_conversations[i].received_bytes += 7
-                        self._uds_conversations[i].completeMessage.data += message.data[2:16]
-                        # If indexByte is 15, we start back over
-                        # at 0 for next sequence number
-                        if index_byte == 15:
-                            self._uds_conversations[i].nextExpectedIndex = 0
+        with self._lock_uds_conversations:
+            for i in range(0, len(self._uds_conversations)):
+                # Correct UDS message
+                if self._uds_conversations[i].completeMessage.src_addr == message.src_addr and \
+                        self._uds_conversations[i].completeMessage.dst_addr == message.dst_addr:
+                    # The index of this received message
+                    index_byte = int(message.data[1:2], 16)
+                    # Correct order of data received
+                    if index_byte == self._uds_conversations[i].nextExpectedIndex:
+                        # Received all data bytes (including the current packet)
+                        if self._uds_conversations[i].complete(curr_received=7):
+                            bytes_left = (
+                                    self._uds_conversations[i].num_bytes -
+                                    self._uds_conversations[i].received_bytes
+                            )
+                            self._uds_conversations[i].received_bytes += bytes_left
+                            data_index = int((bytes_left * 2) + 2)
+                            # Copy final bytes
+                            self._uds_conversations[i].completeMessage.data += message.data[2:data_index]
+                            self._uds_conversations[i].completeMessage.total_bytes = (
+                                    len(self._uds_conversations[i].completeMessage.data) / 2
+                            )
+                            # Ready to send next time a message is read
+                            self._uds_conversations[i].readyToSend = True
+                            # More packets needed, add 7 bytes of data
+                        # to stored message
                         else:
-                            self._uds_conversations[i].nextExpectedIndex += 1
-                    break
-                    # Something happened, delete?
-                else:
-                    del self._uds_conversations[i]
-        self._lock_uds_conversations.release()
+                            self._uds_conversations[i].received_bytes += 7
+                            self._uds_conversations[i].completeMessage.data += message.data[2:16]
+                            # If indexByte is 15, we start back over
+                            # at 0 for next sequence number
+                            if index_byte == 15:
+                                self._uds_conversations[i].nextExpectedIndex = 0
+                            else:
+                                self._uds_conversations[i].nextExpectedIndex += 1
+                        break
+                        # Something happened, delete?
+                    else:
+                        del self._uds_conversations[i]
 
 
 class J1939Message:
