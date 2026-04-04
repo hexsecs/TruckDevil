@@ -363,7 +363,6 @@ class J1939Interface:
         return data_collected
 
     def save_data_collected(self, messages, file_name=None, verbose=False, pretty=False):
-        # TODO: fix save/load functions
         """
         Save the collected messages to a log file
 
@@ -373,26 +372,25 @@ class J1939Interface:
         :param pretty: whether or not to save the message in pretty form (Default value = False).
                         Mutually exclusive with verbose; if both are True, pretty takes priority.
         """
-        # If given messages list is empty
         if len(messages) == 0:
             raise Exception('messages list is empty')
         if file_name is None:
             file_name = 'log_{}.txt'.format(str(int(time.time())))
-        f = open(file_name, "x")
-        f.write("""CAN_ID   Priority    PGN    Source --> Destination    [Num Bytes]    data""" + '\n')
-        for m in messages:
-            if pretty:
-                f.write("{}\n".format(self.pretty_shim.get_pretty_output(m)))
-            elif not verbose:
-                f.write("{}\n".format(m))
-            else:
-                f.write("{}\n".format(self.get_decoded_message(m)))
-        f.close()
+        with open(file_name, "x") as f:
+            f.write("Timestamp    CAN_ID    Priority    PGN    Source --> Destination    [Num Bytes]    data\n")
+            for m in messages:
+                if pretty:
+                    f.write("{}\n".format(self.pretty_shim.get_pretty_output(m)))
+                elif not verbose:
+                    f.write("{}\n".format(m))
+                else:
+                    f.write("{}\n".format(self.get_decoded_message(m)))
 
     def import_data_collected(self, file_name):
-        # TODO: fix save/load functions
         """
-        Converts log file to list of J1939Message objects
+        Converts log file to list of J1939Message objects.
+        Supports both the current format (with timestamp prefix) and the
+        legacy format (without timestamp).
 
         :param file_name: the name of the file where the data is saved
         :returns: list of J1939Message objects from log file
@@ -404,15 +402,21 @@ class J1939Interface:
                 for line in inFile:
                     if first_line:
                         first_line = False
-                    else:
-                        parts = line.split()
-                        if len(parts) == 8 and parts[4] == '-->' and '[' in line:
-                            message = J1939Message(
-                                can_id=int(parts[0], 16),
-                                data=parts[7]
-                            )
-                            messages.append(message)
-                return messages
+                        continue
+                    parts = line.split()
+                    if len(parts) == 9 and parts[5] == '-->' and '[' in line:
+                        message = J1939Message(
+                            can_id=int(parts[1], 16),
+                            data=parts[8]
+                        )
+                        messages.append(message)
+                    elif len(parts) == 8 and parts[4] == '-->' and '[' in line:
+                        message = J1939Message(
+                            can_id=int(parts[0], 16),
+                            data=parts[7]
+                        )
+                        messages.append(message)
+            return messages
         else:
             raise Exception('file name given does not exist.')
 
