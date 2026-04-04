@@ -147,14 +147,13 @@ class Device:
                 try:
                     self._can_bus.send(msg)
                     time.sleep(sleeptime)
+                    return
                 except can.CanOperationError as e:
                     if sleeptime == 0.0:
                         sleeptime = 0.001
                     else:
                         sleeptime = sleeptime * 10
-                    print(f'error: {e} backing off delay to {sleeptime:d}')
+                    print(f'error: {e} backing off delay to {sleeptime}')
                 except Exception as e:
                     print(f'error: {e} aborting.')
-                    return
-                finally:
                     return
