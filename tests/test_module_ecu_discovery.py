@@ -238,17 +238,21 @@ def test_ecu_discovery_class_add_duplicate(truckdevil_module_env):
 
 
 def test_ecu_discovery_find_proprietary_smoke(truckdevil_module_env, shared_channel):
-    """find_proprietary: hits a bug in do_find_proprietary when no messages match --
-    e is None and the code tries e.prop_messages. This documents the existing bug."""
+    """find_proprietary with no matching messages prints a 'not found' message instead of crashing."""
     from libs.device import Device
     import modules.ecu_discovery as ecu_discovery
 
     device = Device("virtual", None, shared_channel, 250000)
     try:
         with patch("modules.ecu_discovery.time.sleep"):
-            # Known bug: AttributeError when no proprietary messages found for unknown ECU
-            with pytest.raises(AttributeError, match="prop_messages"):
+            buf = io.StringIO()
+            old = sys.stdout
+            try:
+                sys.stdout = buf
                 ecu_discovery.main_mod(["find_proprietary", "11", "back"], device)
+            finally:
+                sys.stdout = old
+            assert "no proprietary messages found" in buf.getvalue()
     finally:
         if device.can_bus is not None:
             try:

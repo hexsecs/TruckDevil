@@ -226,6 +226,9 @@ class DiscoveryCommands(Command):
                     e = ECU(address)
                     self.ed.add_known_ecu(e)
                 e.add_prop_message(m)
+        if e is None:
+            print("no proprietary messages found for address {}.".format(address))
+            return
         discovered = len(e.prop_messages) - num_prop_messages
         if discovered > 0:
             print("discovered {} new unique proprietary messages.".format(discovered))
@@ -333,7 +336,6 @@ class DiscoveryCommands(Command):
         else:
             print(found_msg)
 
-    @staticmethod
     def do_back(self, arg=None):
         """
         Return to the main menu
