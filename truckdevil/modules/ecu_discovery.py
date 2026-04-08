@@ -141,7 +141,7 @@ class DiscoveryCommands(Command):
         else:
             print("no new ecus found.")
 
-    def do_find_boot_msg(self, arg):
+    def do_find_boot_msg(self, arg):  # noqa: C901
         """
         Provide the address of the ECU to discover it's reboot message in order to detect crashes.
         ECU must be reset during this test.
@@ -187,7 +187,7 @@ class DiscoveryCommands(Command):
         else:
             print("reboot message for ECU {}: \n{}".format(address, reboot_message))
 
-    def do_find_proprietary(self, arg):
+    def do_find_proprietary(self, arg):  # noqa: C901
         """
         Provide the address of the ECU to discover the proprietary messages it's sending.
         Performs passive and active scanning techniques.
@@ -238,7 +238,7 @@ class DiscoveryCommands(Command):
             for p in e.prop_messages:
                 print(p)
 
-    def do_find_uds(self, arg):
+    def do_find_uds(self, arg):  # noqa: C901
         # TODO: add progress bar
         """
         Provide the address of the ECU to determine if it responds to a UDS session.

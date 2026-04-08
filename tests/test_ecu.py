@@ -1,10 +1,6 @@
 """Unit tests for ECU class (no device)."""
-import sys
-import os
 
 import pytest
-
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "truckdevil"))
 
 from truckdevil.libs.ecu import ECU
 from truckdevil.j1939.j1939 import J1939Message

@@ -1,4 +1,3 @@
-import os
 import shlex
 
 try:
@@ -70,7 +69,7 @@ class PrettyShim:
         )
         self.indent = args.format
 
-    def _prepare_pretty_db(self):
+    def _prepare_pretty_db(self):  # noqa: C901
         """
         Converts truckdevil in-memory data structures into a consolidated dict
         suitable for pretty_j1939.describe.get_describer(da_json=...).

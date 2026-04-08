@@ -29,15 +29,21 @@ def j1939_fields_to_can_id(
 
 class J1939Interface:
     def __init__(
-        self, device, pretty_args=DEFAULT_PRETTY_ARGS, pretty_da_json=MAGIC_TRUCKDEVIL
+        self,
+        device,
+        pretty_args=DEFAULT_PRETTY_ARGS,
+        pretty_da_json=MAGIC_TRUCKDEVIL,
     ):
         """
         Initializes truckdevil
 
         :param device_type: either "m2" or "socketcan" (Default value = 'm2').
-        :param port: serial port that the M2 is connected to, if used. For example: COM7 or /dev/ttyX. 0 if not using M2."
-        :param channel: CAN channel to send/receive on. For example: can0, can1, or vcan0. (Default value = 'can0')
-        :param can_baud: baudrate on the CAN bus. Most common are 250000 and 500000. Use 0 for autobaud detection. (Default value = 0)
+        :param port: serial port that the M2 is connected to, if used. For
+            example: COM7 or /dev/ttyX. 0 if not using M2."
+        :param channel: CAN channel to send/receive on. For example: can0,
+            can1, or vcan0. (Default value = 'can0')
+        :param can_baud: baudrate on the CAN bus. Most common are 250000 and
+            500000. Use 0 for autobaud detection. (Default value = 0)
         :param pretty_args: string of arguments to pass to pretty_j1939 (Default value = DEFAULT_PRETTY_ARGS)
         :param pretty_da_json: source for J1939 definitions. MAGIC_TRUCKDEVIL for in-memory conversion or a filename.
         """
@@ -122,7 +128,7 @@ class J1939Interface:
         """Used by internal timer for printMessages function."""
         self._print_messages_time_done = True
 
-    def print_messages(
+    def print_messages(  # noqa: C901
         self,
         abstract_tpm=True,
         read_time=None,
@@ -200,7 +206,7 @@ class J1939Interface:
             # Only allow if data collection is not occurring
             if self.data_collection_occurring:
                 raise Exception(
-                    """data collection began abruptly, stop data collection 
+                    """data collection began abruptly, stop data collection
                     before proceeding with this function"""
                 )
             j1939_message = self.read_one_message(abstract_tpm, self.m_manager)
@@ -286,7 +292,7 @@ class J1939Interface:
         if pretty:
             self.pretty_shim.print_summary()
 
-    def read_messages_until(self, rts_response_addr=None, **params):
+    def read_messages_until(self, rts_response_addr=None, **params):  # noqa: C901
         """
         Read all messages from device until a specific message is found, at least one parameter should be specified to
         look for.
@@ -522,7 +528,7 @@ class J1939Interface:
             ):
                 self._add_to_collected_messages(j1939_message)
 
-    def read_one_message(self, abstract_tpm=False, message_manager=None, timeout=None):
+    def read_one_message(self, abstract_tpm=False, message_manager=None, timeout=None):  # noqa: C901
         if message_manager is None:
             message_manager = self.m_manager
         while True:
@@ -728,7 +734,7 @@ class J1939Interface:
             message.data.upper(),
         )
 
-    def get_decoded_message(self, message=None):
+    def get_decoded_message(self, message=None):  # noqa: C901
         """
         Decodes a J1939_Message object into human-readable string
 
@@ -920,7 +926,7 @@ class J1939Interface:
                 decoded += "      Cannot decode SPNs\n"
         return decoded
 
-    def _uds_decode(self, message):
+    def _uds_decode(self, message):  # noqa: C901
         """
         Takes in J1939_message and return the decoded string
         For internal function use.
@@ -1077,7 +1083,6 @@ class J1939Interface:
         temp_length_of_memory_size = -1
         temp_scaling_byte_data_type = -1
         temp_length_scaling_byte = -1
-        temp_routine_identifier = -1
         temp_length_file_path_and_name = -1
         temp_mode_of_operation = -1
         temp_length_file_size_parameter = -1
@@ -1300,8 +1305,6 @@ class J1939Interface:
                         if range_nums[0] <= val <= range_nums[1]:
                             param_name = function["parameters"][param]
                 decoded += "            value: " + val + " - " + param_name + "\n"
-                if func_name == "routineIdentifier":
-                    temp_routine_identifier = param_name
                 data_index += function["numBytes"]
             elif function["type"] == "optional" and function["numBytes"] == "variable":
                 if (
@@ -1803,13 +1806,14 @@ class _J1939ISOTPMessage:
     """
 
     def __init__(self, first_message=None):
-        if isinstance(first_message, J1939Message) == False or first_message is None:
+        if not isinstance(first_message, J1939Message) or first_message is None:
             raise Exception("Must include an instance of a J1939Message")
 
         # Between 8 and 4095 bytes
         self.num_bytes = int(first_message.data[1:4], 16)
 
-        """can_id = j1939_fields_to_can_id(first_message.priority, first_message.reserved_bit, first_message.data_page_bit,
+        """can_id = j1939_fields_to_can_id(
+            first_message.priority, first_message.reserved_bit, first_message.data_page_bit,
                                         first_message.pdu_format, pdu_specific, first_message.src_addr)
 
         priority = first_message.priority

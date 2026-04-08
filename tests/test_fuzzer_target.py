@@ -1,10 +1,6 @@
 """Unit tests for J1939Fuzzer.Target class (no device)."""
-import sys
-import os
 
 import pytest
-
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "truckdevil"))
 
 from truckdevil.modules.j1939_fuzzer import J1939Fuzzer
 
@@ -183,6 +179,7 @@ def test_fuzzer_targets_setter(fuzzer_with_device):
 
 def test_fuzzer_mutate_priority(fuzzer_with_device):
     from truckdevil.j1939.j1939 import J1939Message
+
     fuzzer = fuzzer_with_device
     msg = J1939Message(0x18EA00FF, "AABBCCDD")
     original_data = msg.data
@@ -193,6 +190,7 @@ def test_fuzzer_mutate_priority(fuzzer_with_device):
 
 def test_fuzzer_mutate_data(fuzzer_with_device):
     from truckdevil.j1939.j1939 import J1939Message
+
     fuzzer = fuzzer_with_device
     msg = J1939Message(0x18EA00FF, "AABBCCDD")
     result = fuzzer.mutate(msg, mutate_data=True)
@@ -201,6 +199,7 @@ def test_fuzzer_mutate_data(fuzzer_with_device):
 
 def test_fuzzer_mutate_all_fields(fuzzer_with_device):
     from truckdevil.j1939.j1939 import J1939Message
+
     fuzzer = fuzzer_with_device
     msg = J1939Message(0x18EA00FF, "AABBCCDD")
     result = fuzzer.mutate(
@@ -223,6 +222,7 @@ def test_fuzzer_mutate_all_fields(fuzzer_with_device):
 
 def test_fuzzer_mutate_data_length(fuzzer_with_device):
     from truckdevil.j1939.j1939 import J1939Message
+
     fuzzer = fuzzer_with_device
     msg = J1939Message(0x18EA00FF, "AABBCCDD")
     result = fuzzer.mutate(msg, mutate_data_length=True)

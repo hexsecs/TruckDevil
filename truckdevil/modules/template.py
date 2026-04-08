@@ -74,7 +74,7 @@ class TemplateCommands(Command):
                     print("third argument invalid, let me RTFM that for you!")
                     self.do_help("custom_send")
                     return
-        except:
+        except Exception:
             print(
                 "something went wrong before sending message, let me RTFM that for you!"
             )
@@ -83,7 +83,7 @@ class TemplateCommands(Command):
 
         try:
             self.devil.send_message(message)
-        except:
+        except Exception:
             print("something went wrong, let me RTFM that for you!")
             self.do_help("custom_send")
             return
@@ -98,7 +98,7 @@ class TemplateCommands(Command):
         try:
             # Do some things
             print("Do Something Useful")
-        except:
+        except Exception:
             # Handle Errors
             print("Something Useful")
             return

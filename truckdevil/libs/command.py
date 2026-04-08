@@ -21,7 +21,8 @@ class Command(cmd.Cmd):
         """
         try:
             import readline
-            if getattr(readline, '__doc__', None) and 'libedit' in readline.__doc__:
+
+            if getattr(readline, "__doc__", None) and "libedit" in readline.__doc__:
                 readline.parse_and_bind("bind ^I rl_complete")
         except ImportError:
             pass
@@ -37,11 +38,11 @@ class Command(cmd.Cmd):
         cmd_args = []
         for arg in argv:
             if arg in command_names and len(cmd_args) != 0:
-                self.onecmd(' '.join(cmd_args))
+                self.onecmd(" ".join(cmd_args))
                 cmd_args = []
             cmd_args.append(arg)
         if len(cmd_args) != 0:
-            self.onecmd(' '.join(cmd_args))
+            self.onecmd(" ".join(cmd_args))
 
     def complete_set(self, text, line, begidx, endidx):
         if not self.sm:

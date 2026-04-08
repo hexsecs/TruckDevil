@@ -46,7 +46,9 @@ class Reader:
                 "Arguments to pass to the pretty_j1939 renderer and describer"
             ),
             Setting("pretty_da_json", MAGIC_TRUCKDEVIL).add_description(
-                f'Source for J1939 definitions. "{MAGIC_TRUCKDEVIL}" for in-memory conversion, "{MAGIC_DEFAULT}" for pretty_j1939 defaults, or a filename.'
+                f'Source for J1939 definitions. "{MAGIC_TRUCKDEVIL}" for '
+                f'in-memory conversion, "{MAGIC_DEFAULT}" for '
+                "pretty_j1939 defaults, or a filename."
             ),
             Setting("filter_can_id", [0])
             .add_constraint(
@@ -133,7 +135,7 @@ class ReadCommands(Command):
         print(self.reader.sm)
         return
 
-    def do_set(self, arg):
+    def do_set(self, arg):  # noqa: C901
         """
         Provide a setting name and a value to set the setting. For a list of
         available settings and their current and default values see the
@@ -156,15 +158,15 @@ class ReadCommands(Command):
             elif self.reader.sm[name].datatype == float:
                 self.reader.sm.set(name, float(argv[1]))
             elif self.reader.sm[name].datatype == bool:
-                if argv[1] in ["True", "true", "on", 1]:
+                if argv[1] in ["True", "true", "on", "1"]:
                     self.reader.sm.set(name, True)
-                elif argv[1] in ["False", "false", "off", 0]:
+                elif argv[1] in ["False", "false", "off", "0"]:
                     self.reader.sm.set(name, False)
                 else:
                     self.reader.sm.set(name, argv[1])
             elif self.reader.sm[name].datatype == list:
                 values = argv[1].split(",")
-                if type(self.reader.sm[name].default_value[0]) == int:
+                if isinstance(self.reader.sm[name].default_value[0], int):
                     new_values = []
                     for v in values:
                         if v.startswith("0x"):
@@ -196,7 +198,7 @@ class ReadCommands(Command):
         name = argv[0]
         self.reader.sm.unset(name)
 
-    def do_print_messages(self, arg):
+    def do_print_messages(self, arg):  # noqa: C901
         """Read and print all messages from CAN device, based on settings"""
         read_time = None
         num_messages = None

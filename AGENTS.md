@@ -46,8 +46,8 @@ uv tool install .
 Preferred local commands:
 
 ```bash
-uv run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-uv run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+uv run flake8 . --exclude .venv,.venv-*,venv,dist,build --extend-ignore E203 --count --select=E9,F63,F7,F82 --show-source --statistics
+uv run flake8 . --exclude .venv,.venv-*,venv,dist,build --extend-ignore E203 --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
 ```
 
 ## Test Commands

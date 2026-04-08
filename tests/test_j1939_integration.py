@@ -1,6 +1,6 @@
 """Integration tests for J1939Interface with virtual device."""
+
 import io
-import os
 import sys
 import threading
 import time
@@ -67,6 +67,7 @@ def test_j1939_filters(two_virtual_devices):
     msg2 = J1939Message(0x0CEC000B, "44556677")  # src_addr 0x0B
     iface_tx.send_message(msg2)
     import time
+
     time.sleep(0.5)
     collected = iface_rx.stop_data_collection()
     # Filter was src_addr=[0xFF], so we expect at least the first message (and possibly both depending on timing)
@@ -216,7 +217,9 @@ def test_multipacket_send_bam(two_virtual_devices):
 
     # 12 bytes of data -> requires 2 TP data transfer packets
     long_data = "AABBCCDDEEFF00112233AABB"
-    msg = J1939Message(0x18EAFF00, long_data)  # broadcast (pdu_format >= 0xF0, dst 0xFF)
+    msg = J1939Message(
+        0x18EAFF00, long_data
+    )  # broadcast (pdu_format >= 0xF0, dst 0xFF)
     iface_tx.send_message(msg)
 
     # Receiver should see the BAM control message (pdu_format=0xEC) and data transfer (0xEB)
@@ -305,12 +308,16 @@ def test_isotp_first_frame_and_consecutive_reassembly(two_virtual_devices):
     # 10 bytes total, first frame carries 6 bytes of payload
     first_frame_data = bytes.fromhex("100AAABBCCDDEEFF")  # size=10, 6 payload bytes
     first_can_id = j1939_fields_to_can_id(6, 0, 0, 0xDA, 0x00, 0xF9)
-    first_msg = can.Message(arbitration_id=first_can_id, data=first_frame_data, is_extended_id=True)
+    first_msg = can.Message(
+        arbitration_id=first_can_id, data=first_frame_data, is_extended_id=True
+    )
     dev_tx.send(first_msg)
 
     # Consecutive frame: first nibble '2', index=1, remaining 4 bytes + padding
     consec_data = bytes.fromhex("2111223344FFFFFF")  # index=1, 4 payload bytes
-    consec_msg = can.Message(arbitration_id=first_can_id, data=consec_data, is_extended_id=True)
+    consec_msg = can.Message(
+        arbitration_id=first_can_id, data=consec_data, is_extended_id=True
+    )
     time.sleep(0.05)
     dev_tx.send(consec_msg)
 
@@ -484,7 +491,7 @@ def test_print_messages_num_messages(two_virtual_devices):
     finally:
         sys.stdout = old
     t.join(timeout=3)
-    lines = [l for l in buf.getvalue().strip().split("\n") if l.strip()]
+    lines = [line for line in buf.getvalue().strip().split("\n") if line.strip()]
     assert len(lines) == 3
 
 
@@ -512,7 +519,7 @@ def test_print_messages_with_src_addr_filter(two_virtual_devices):
     finally:
         sys.stdout = old
     t.join(timeout=3)
-    lines = [l for l in buf.getvalue().strip().split("\n") if l.strip()]
+    lines = [line for line in buf.getvalue().strip().split("\n") if line.strip()]
     assert len(lines) == 2
     for line in lines:
         assert "0B" not in line.split()[0][-2:]

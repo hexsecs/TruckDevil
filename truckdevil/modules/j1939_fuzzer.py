@@ -287,7 +287,7 @@ class J1939Fuzzer:
             if t.address == address:
                 self._targets[idx] = self.Target(address, pgn, data)
 
-    def mutate(
+    def mutate(  # noqa: C901
         self,
         message: J1939Message,
         mutate_priority=False,
@@ -352,14 +352,15 @@ class J1939Fuzzer:
                     message.data += data_byte
         return message
 
-    def generate(self, option=0, **test_case_values):
+    def generate(self, option=0, **test_case_values):  # noqa: C901
         """
         Generate and return a J1939_Message based on optional parameters.
 
         :param option: optional int (0-2), if not given then generate a random option between 0-2
             0) generate data based on the pgn, data length and format matching the specified pgn
                in this case, all of the data within will be generated based on acceptable ranges
-               for example, if field is 1 byte long, it will be between 0-255 (even if operationally it only allows 0-200)
+               for example, if field is 1 byte long, it will be between
+               0-255 (even if operationally it only allows 0-200)
             1) generate data randomly based on data length of specified pgn
             2) generate random data length and random data
         :param test_case_values:
@@ -489,7 +490,7 @@ class J1939Fuzzer:
         message = J1939Message(can_id, data)
         return message
 
-    def anomaly_check(self):
+    def anomaly_check(self):  # noqa: C901
         """
         Checks for anomalies/differences from the baseline every x seconds, based on check_frequency variable
         """
@@ -649,7 +650,7 @@ class J1939Fuzzer:
                     previous_interval_messages = copy.copy(self.fuzzed_messages)
                     self.fuzzed_messages.clear()
 
-    def create_fuzz_list(self):
+    def create_fuzz_list(self):  # noqa: C901
         self.test_cases = []
         for i in range(0, self.sm.num_messages):
             choice = self.sm.mode
@@ -906,7 +907,7 @@ class FuzzerCommands(Command):
             print("Could not set: {}".format(e))
         return
 
-    def do_target(self, arg):
+    def do_target(self, arg):  # noqa: C901
         """
         Add, remove, clear, and modify targets
 
@@ -937,7 +938,7 @@ class FuzzerCommands(Command):
         def safe_get(vec, index, default):
             try:
                 rval = vec[index]
-            except:
+            except IndexError:
                 return default
             return rval
 

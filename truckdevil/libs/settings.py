@@ -1,6 +1,7 @@
 """
 Settings management for truckdevil
 """
+
 from typing import Any
 from collections.abc import Callable
 from textwrap import fill
@@ -57,13 +58,19 @@ class Setting:
         if len(self.constraints) > 0:
             for name in self.constraints:
                 if not self.constraints[name](new_value):
-                    raise ValueError("constraint {} excludes {}".format(name, new_value))
+                    raise ValueError(
+                        "constraint {} excludes {}".format(name, new_value)
+                    )
 
-        if type(new_value) == self.datatype:
+        if isinstance(new_value, self.datatype):
             self._value = new_value
             return
 
-        raise ValueError("expected a {} but got {} ({})".format(type(self.datatype), type(new_value), new_value))
+        raise ValueError(
+            "expected a {} but got {} ({})".format(
+                type(self.datatype), type(new_value), new_value
+            )
+        )
 
     @property
     def updated(self):
@@ -92,10 +99,20 @@ class Setting:
         if type(self.value) is list:
             str_vals = ", ".join([str(i) for i in self.value])
             str_def_vals = ", ".join([str(i) for i in self.default_value])
-            return fill("{:<24} {:>12} (default: {:<5}) {:<}".format(self.name, str_vals, str_def_vals, self.description),
-                        width=120, subsequent_indent=" " * 55)
-        return fill("{:<24} {:>12} (default: {:<5}) {:<}".format(
-            self.name, self.value, self.default_value, self.description), width=120, subsequent_indent=" " * 55)
+            return fill(
+                "{:<24} {:>12} (default: {:<5}) {:<}".format(
+                    self.name, str_vals, str_def_vals, self.description
+                ),
+                width=120,
+                subsequent_indent=" " * 55,
+            )
+        return fill(
+            "{:<24} {:>12} (default: {:<5}) {:<}".format(
+                self.name, self.value, self.default_value, self.description
+            ),
+            width=120,
+            subsequent_indent=" " * 55,
+        )
 
 
 class SettingsManager:
