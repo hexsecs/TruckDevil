@@ -81,6 +81,21 @@ def test_version_flag(truckdevil_module_env):
     assert _load_version() in result.stdout
 
 
+def test_python_module_version_flag(truckdevil_module_env):
+    """python -m truckdevil --version prints 'truckdevil <version>' and exits."""
+    import subprocess
+
+    result = subprocess.run(
+        [sys.executable, "-m", "truckdevil", "--version"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        cwd=_REPO_ROOT,
+    )
+    assert result.returncode == 0
+    assert _load_version() in result.stdout
+
+
 def test_cli_add_device_list_device(truckdevil_module_env, shared_channel):
     """add_device virtual <channel> 250000 then list_device; assert device type virtual and channel in output."""
     FrameworkCommands = _load_framework_commands()
@@ -382,6 +397,33 @@ def test_cli_run_user_module(truckdevil_module_env, tmp_path, monkeypatch):
     assert "user module hello world" in buf.getvalue()
 
 
+def test_cli_user_module_path_env_supports_multiple_dirs(
+    truckdevil_module_env, tmp_path, monkeypatch
+):
+    first_dir = tmp_path / "modules_a"
+    second_dir = tmp_path / "modules_b"
+    first_dir.mkdir()
+    second_dir.mkdir()
+    (second_dir / "user_echo.py").write_text(
+        dedent(
+            """
+            def main_mod(argv, device):
+                print("multi path module")
+            """
+        ).strip()
+        + "\n"
+    )
+    monkeypatch.setenv(
+        "TRUCKDEVIL_MODULE_PATH",
+        os.pathsep.join([str(first_dir), str(second_dir)]),
+    )
+
+    FrameworkCommands = _load_framework_commands()
+    fc = FrameworkCommands()
+
+    assert "user_echo" in fc.module_names
+
+
 class _FakeEntryPoint:
     def __init__(self, name, loaded):
         self.name = name
@@ -389,6 +431,12 @@ class _FakeEntryPoint:
 
     def load(self):
         return self._loaded
+
+
+class _ModuleWithMainMod:
+    @staticmethod
+    def main_mod(argv, device):
+        print("plugin main_mod {}".format(" ".join(argv)))
 
 
 def test_cli_list_modules_includes_entry_point_module(
@@ -432,6 +480,27 @@ def test_cli_run_entry_point_module(truckdevil_module_env, monkeypatch):
         sys.stdout = old
 
     assert "plugin module alpha beta" in buf.getvalue()
+
+
+def test_cli_run_entry_point_module_object(truckdevil_module_env, monkeypatch):
+    cli_mod = _load_truckdevil_cli_module()
+
+    monkeypatch.setattr(
+        cli_mod,
+        "_iter_module_entry_points",
+        lambda: [_FakeEntryPoint("plugin_main_mod", _ModuleWithMainMod())],
+    )
+
+    fc = cli_mod.FrameworkCommands()
+    buf = __import__("io").StringIO()
+    old = sys.stdout
+    try:
+        sys.stdout = buf
+        fc.onecmd("run_module plugin_main_mod gamma delta")
+    finally:
+        sys.stdout = old
+
+    assert "plugin main_mod gamma delta" in buf.getvalue()
 
 
 def test_main_module_path_argument(truckdevil_module_env, tmp_path, monkeypatch):

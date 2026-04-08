@@ -108,6 +108,67 @@ def _run_module_entry(module, argv, device):
     raise AttributeError("module is missing main_mod")
 
 
+def _parse_cli_args(argv):
+    module_paths = []
+    filtered_argv = []
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--module-path":
+            if i + 1 >= len(argv):
+                print("Error: expected path after --module-path")
+                return None, None
+            module_paths.append(argv[i + 1])
+            i += 2
+            continue
+        filtered_argv.append(argv[i])
+        i += 1
+    return filtered_argv, module_paths
+
+
+def _configure_readline():
+    try:
+        import readline
+
+        # libedit (macOS / some BSDs) uses a different binding syntax;
+        # GNU readline's "tab: complete" is silently ignored by libedit.
+        # Setting the correct binding here ensures tab-completion works
+        # regardless of the backend (cmd.Cmd.cmdloop only uses GNU syntax).
+        if getattr(readline, "__doc__", None) and "libedit" in readline.__doc__:
+            readline.parse_and_bind("bind ^I rl_complete")
+        else:
+            readline.parse_and_bind("tab: complete")
+    except ImportError:
+        print("Warning: readline not found. Tab-completion will not work.")
+        if sys.platform == "win32":
+            print("  Install it with:  pip install pyreadline3")
+        else:
+            print("  On Debian/Ubuntu:  sudo apt install libreadline-dev")
+            print("  Then rebuild Python or:  pip install gnureadline")
+
+
+def _run_cli_commands(fc, argv):
+    if not argv:
+        fc.cmdloop()
+        return
+
+    if argv[0] == "add_device" and "run_module" in argv:
+        module_index = argv.index("run_module")
+        device_args = argv[:module_index]
+        module_args_start = module_index + 1
+        module_args = argv[module_args_start:]
+        fc.onecmd(" ".join(device_args))
+        fc.onecmd(" ".join(module_args))
+        return
+
+    if argv[0] == "add_device" and "run_module" not in argv:
+        fc.onecmd(" ".join(argv[:5]))
+        fc.onecmd(" ".join(argv[5:]))
+        fc.cmdloop()
+        return
+
+    fc.onecmd(" ".join(argv))
+
+
 class FrameworkCommands(cmd.Cmd):
     intro = "Welcome to the truckdevil framework v{}. Type 'help or ?' for a list of commands.".format(
         __version__
@@ -260,60 +321,17 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
 
-    module_paths = []
-    filtered_argv = []
-    i = 0
-    while i < len(argv):
-        if argv[i] == "--module-path":
-            if i + 1 >= len(argv):
-                print("Error: expected path after --module-path")
-                return 1
-            module_paths.append(argv[i + 1])
-            i += 2
-            continue
-        filtered_argv.append(argv[i])
-        i += 1
-    argv = filtered_argv
+    argv, module_paths = _parse_cli_args(argv)
+    if argv is None:
+        return 1
 
     if "--version" in argv or "-V" in argv:
         print("truckdevil {}".format(__version__))
         return 0
 
-    try:
-        import readline
-
-        # libedit (macOS / some BSDs) uses a different binding syntax;
-        # GNU readline's "tab: complete" is silently ignored by libedit.
-        # Setting the correct binding here ensures tab-completion works
-        # regardless of the backend (cmd.Cmd.cmdloop only uses GNU syntax).
-        if getattr(readline, "__doc__", None) and "libedit" in readline.__doc__:
-            readline.parse_and_bind("bind ^I rl_complete")
-        else:
-            readline.parse_and_bind("tab: complete")
-    except ImportError:
-        print("Warning: readline not found. Tab-completion will not work.")
-        if sys.platform == "win32":
-            print("  Install it with:  pip install pyreadline3")
-        else:
-            print("  On Debian/Ubuntu:  sudo apt install libreadline-dev")
-            print("  Then rebuild Python or:  pip install gnureadline")
-
+    _configure_readline()
     fc = FrameworkCommands(module_paths=module_paths or None)
-    if len(argv) > 0:
-        if argv[0] == "add_device" and "run_module" in argv:
-            module_index = argv.index("run_module")
-            device_args = argv[:module_index]
-            module_args = argv[module_index + 1 :]
-            fc.onecmd(" ".join(device_args))
-            fc.onecmd(" ".join(module_args))
-        elif argv[0] == "add_device" and "run_module" not in argv:
-            fc.onecmd(" ".join(argv[:5]))
-            fc.onecmd(" ".join(argv[5:]))
-            fc.cmdloop()
-        else:
-            fc.onecmd(" ".join(argv))
-    else:
-        fc.cmdloop()
+    _run_cli_commands(fc, argv)
     return 0
 
 
