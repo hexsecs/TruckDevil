@@ -97,7 +97,8 @@ From repo root:
 ```bash
 uv sync
 uv run pytest tests/ -v
-uv run flake8 . --max-line-length=120
+uv run flake8 . --exclude '.venv,.venv-*,venv,dist,build' --extend-ignore E203 --max-line-length=120
+rm -rf dist build
 uv build
 uv tool install .
 truckdevil --version
@@ -157,8 +158,8 @@ PyPI publish can happen in either of two ways.
 3. Create and push a tag:
 
 ```bash
-git tag v1.1.0
-git push upstream v1.1.0
+git tag v1.2.0
+git push upstream v1.2.0
 ```
 
 4. The `Publish` workflow will publish to PyPI automatically
