@@ -74,6 +74,10 @@ uv run pytest tests/test_settings.py -q
 - Module entrypoints are `main_mod(argv, device)`
 - Module command classes usually subclass `libs.command.Command`
 - `do_back()` generally returns `True` to leave a module REPL
+- Built-in modules live under `truckdevil/modules/`
+- User modules can be discovered from `TRUCKDEVIL_MODULE_PATH` or `~/.config/truckdevil/modules`
+- Users can override module discovery paths with `truckdevil --module-path <dir>`
+- Plugin packages can register entry points in the `truckdevil.modules` group
 
 ## Recommended Git Structure
 Best setup for contributing upstream through your fork:

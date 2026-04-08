@@ -213,13 +213,88 @@ The optional dependency can be installed with `pip install 'truckdevil[pretty]'`
 
 ### Custom Modules
 
-Create custom modules by creating a python file in the 'modules' folder. 
-The file should contain the following function:
+TruckDevil supports three module sources:
+
+1. Built-in modules bundled with TruckDevil
+2. User module directories
+3. Python packages that register entry-point plugins
+
+Every module should expose either:
+
 ```
 def main_mod(argv, device)
 ```
+
+or an entry-point callable with the same `(argv, device)` signature.
+
 - **argv** contains the list of arguments passed to the module 
 - **device** contains the Device object passed to the module
+
+### User Modules
+
+Default user module directory:
+
+```bash
+~/.config/truckdevil/modules
+```
+
+Example module file:
+
+```python
+def main_mod(argv, device):
+    print("hello from custom module", argv)
+```
+
+Run with the default user-module location:
+
+```bash
+truckdevil
+list_modules
+run_module my_module foo bar
+```
+
+Override the user module directory for a single run:
+
+```bash
+truckdevil --module-path /path/to/modules
+truckdevil --module-path /path/to/modules run_module my_module foo bar
+```
+
+You can also set it with an environment variable:
+
+```bash
+export TRUCKDEVIL_MODULE_PATH=/path/to/modules
+truckdevil
+```
+
+`TRUCKDEVIL_MODULE_PATH` accepts multiple directories separated by your platform path separator.
+
+### Plugin Packages
+
+TruckDevil also discovers modules from Python entry points in the `truckdevil.modules` group.
+
+Example plugin package configuration in `pyproject.toml`:
+
+```toml
+[project.entry-points."truckdevil.modules"]
+my_plugin = "truckdevil_my_plugin:main_mod"
+```
+
+After installing that package in the same environment as TruckDevil, the module will appear in `list_modules` and can be run with:
+
+```bash
+truckdevil run_module my_plugin
+```
+
+### In-Repo Modules
+
+If you are developing inside the TruckDevil repository itself, you can still add built-in modules under:
+
+```bash
+truckdevil/modules/
+```
+
+That is still the right approach for changes intended to ship with the main project.
 
 ### J1939 API
 

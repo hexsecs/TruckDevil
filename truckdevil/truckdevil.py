@@ -1,5 +1,6 @@
 import cmd
 import importlib
+import importlib.metadata
 import importlib.util
 import os
 import sys
@@ -21,17 +22,103 @@ def _load_version():
 __version__ = _load_version()
 
 
+def _get_user_module_paths(cli_paths=None):
+    if cli_paths:
+        return cli_paths
+    configured_path = os.environ.get("TRUCKDEVIL_MODULE_PATH")
+    if configured_path:
+        return [p for p in configured_path.split(os.pathsep) if p]
+    return [os.path.expanduser("~/.config/truckdevil/modules")]
+
+
+def _discover_builtin_modules():
+    module_path = os.path.join(os.path.dirname(__file__), "modules")
+    modules = {}
+    for _, name, _ in iter_modules([module_path]):
+        modules[name] = {
+            "source": "builtin",
+            "loader": lambda module_name=name: importlib.import_module(
+                "truckdevil.modules.{}".format(module_name)
+            ),
+        }
+    return modules
+
+
+def _discover_user_modules(cli_paths=None):
+    modules = {}
+    for module_path in _get_user_module_paths(cli_paths):
+        if not os.path.isdir(module_path):
+            continue
+        for _, name, _ in iter_modules([module_path]):
+            file_path = os.path.join(module_path, "{}.py".format(name))
+            modules[name] = {
+                "source": "user",
+                "loader": lambda module_name=name, module_file=file_path: (
+                    _load_module_from_path(module_name, module_file)
+                ),
+            }
+    return modules
+
+
+def _iter_module_entry_points():
+    entry_points = importlib.metadata.entry_points()
+    if hasattr(entry_points, "select"):
+        return entry_points.select(group="truckdevil.modules")
+    return entry_points.get("truckdevil.modules", [])
+
+
+def _discover_entry_point_modules():
+    modules = {}
+    for entry_point in _iter_module_entry_points():
+        modules[entry_point.name] = {
+            "source": "entry_point",
+            "loader": lambda ep=entry_point: ep.load(),
+        }
+    return modules
+
+
+def _discover_modules(cli_paths=None):
+    modules = _discover_builtin_modules()
+    for external_modules in (
+        _discover_user_modules(cli_paths),
+        _discover_entry_point_modules(),
+    ):
+        for name, metadata in external_modules.items():
+            if name not in modules:
+                modules[name] = metadata
+    return modules
+
+
+def _load_module_from_path(module_name, module_file):
+    spec = importlib.util.spec_from_file_location(
+        "truckdevil_user_module_{}".format(module_name), module_file
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _run_module_entry(module, argv, device):
+    if hasattr(module, "main_mod"):
+        module.main_mod(argv, device)
+        return
+    if callable(module):
+        module(argv, device)
+        return
+    raise AttributeError("module is missing main_mod")
+
+
 class FrameworkCommands(cmd.Cmd):
     intro = "Welcome to the truckdevil framework v{}. Type 'help or ?' for a list of commands.".format(
         __version__
     )
     prompt = "(truckdevil) "
 
-    def __init__(self):
+    def __init__(self, module_paths=None):
         super().__init__()
         self._device = None
-        module_path = os.path.join(os.path.dirname(__file__), "modules")
-        self.module_names = [name for _, name, _ in iter_modules([module_path])]
+        self.modules = _discover_modules(module_paths)
+        self.module_names = sorted(self.modules)
 
     @property
     def device(self):
@@ -115,12 +202,13 @@ class FrameworkCommands(cmd.Cmd):
             self.do_help("run_module")
             return
         module_name = argv[0]
-        if module_name in self.module_names:
-            mod = importlib.import_module("truckdevil.modules.{}".format(module_name))
-            mod.main_mod(argv[1:], self.device)
-        else:
+        if module_name not in self.modules:
             print("Error: module not found")
             self.do_help("run_module")
+            return
+
+        mod = self.modules[module_name]["loader"]()
+        _run_module_entry(mod, argv[1:], self.device)
 
     def do_use(self, args):
         """
@@ -172,6 +260,21 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
 
+    module_paths = []
+    filtered_argv = []
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--module-path":
+            if i + 1 >= len(argv):
+                print("Error: expected path after --module-path")
+                return 1
+            module_paths.append(argv[i + 1])
+            i += 2
+            continue
+        filtered_argv.append(argv[i])
+        i += 1
+    argv = filtered_argv
+
     if "--version" in argv or "-V" in argv:
         print("truckdevil {}".format(__version__))
         return 0
@@ -195,7 +298,7 @@ def main(argv=None):
             print("  On Debian/Ubuntu:  sudo apt install libreadline-dev")
             print("  Then rebuild Python or:  pip install gnureadline")
 
-    fc = FrameworkCommands()
+    fc = FrameworkCommands(module_paths=module_paths or None)
     if len(argv) > 0:
         if argv[0] == "add_device" and "run_module" in argv:
             module_index = argv.index("run_module")

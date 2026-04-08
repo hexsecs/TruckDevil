@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import uuid
+from textwrap import dedent
 
 import pytest
 
@@ -13,8 +14,8 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _TRUCKDEVIL_DIR = os.path.join(_REPO_ROOT, "truckdevil")
 
 
-def _load_framework_commands():
-    """Load FrameworkCommands from truckdevil.py with truckdevil dir on path."""
+def _load_truckdevil_cli_module():
+    """Load truckdevil.py as a module for CLI-focused tests."""
     spec = importlib.util.spec_from_file_location(
         "truckdevil_cli",
         os.path.join(_TRUCKDEVIL_DIR, "truckdevil.py"),
@@ -25,9 +26,13 @@ def _load_framework_commands():
     try:
         sys.path.insert(0, _REPO_ROOT)
         spec.loader.exec_module(mod)
-        return mod.FrameworkCommands
+        return mod
     finally:
         sys.path[:] = old_path
+
+
+def _load_framework_commands():
+    return _load_truckdevil_cli_module().FrameworkCommands
 
 
 @pytest.fixture
@@ -324,3 +329,152 @@ def test_cli_device_added_property(truckdevil_module_env, shared_channel):
             fc.device.can_bus.shutdown()
         except Exception:
             pass
+
+
+def test_cli_list_modules_includes_user_module(
+    truckdevil_module_env, tmp_path, monkeypatch
+):
+    module_dir = tmp_path / "modules"
+    module_dir.mkdir()
+    module_file = module_dir / "user_echo.py"
+    module_file.write_text(
+        dedent(
+            """
+            def main_mod(argv, device):
+                print("user module ran")
+            """
+        ).strip()
+        + "\n"
+    )
+    monkeypatch.setenv("TRUCKDEVIL_MODULE_PATH", str(module_dir))
+
+    FrameworkCommands = _load_framework_commands()
+    fc = FrameworkCommands()
+
+    assert "user_echo" in fc.module_names
+
+
+def test_cli_run_user_module(truckdevil_module_env, tmp_path, monkeypatch):
+    module_dir = tmp_path / "modules"
+    module_dir.mkdir()
+    module_file = module_dir / "user_echo.py"
+    module_file.write_text(
+        dedent(
+            """
+            def main_mod(argv, device):
+                print("user module {}".format(" ".join(argv)))
+            """
+        ).strip()
+        + "\n"
+    )
+    monkeypatch.setenv("TRUCKDEVIL_MODULE_PATH", str(module_dir))
+
+    FrameworkCommands = _load_framework_commands()
+    fc = FrameworkCommands()
+    buf = __import__("io").StringIO()
+    old = sys.stdout
+    try:
+        sys.stdout = buf
+        fc.onecmd("run_module user_echo hello world")
+    finally:
+        sys.stdout = old
+
+    assert "user module hello world" in buf.getvalue()
+
+
+class _FakeEntryPoint:
+    def __init__(self, name, loaded):
+        self.name = name
+        self._loaded = loaded
+
+    def load(self):
+        return self._loaded
+
+
+def test_cli_list_modules_includes_entry_point_module(
+    truckdevil_module_env, monkeypatch
+):
+    cli_mod = _load_truckdevil_cli_module()
+
+    def plugin_main(argv, device):
+        return None
+
+    monkeypatch.setattr(
+        cli_mod,
+        "_iter_module_entry_points",
+        lambda: [_FakeEntryPoint("plugin_echo", plugin_main)],
+    )
+
+    fc = cli_mod.FrameworkCommands()
+
+    assert "plugin_echo" in fc.module_names
+
+
+def test_cli_run_entry_point_module(truckdevil_module_env, monkeypatch):
+    cli_mod = _load_truckdevil_cli_module()
+
+    def plugin_main(argv, device):
+        print("plugin module {}".format(" ".join(argv)))
+
+    monkeypatch.setattr(
+        cli_mod,
+        "_iter_module_entry_points",
+        lambda: [_FakeEntryPoint("plugin_echo", plugin_main)],
+    )
+
+    fc = cli_mod.FrameworkCommands()
+    buf = __import__("io").StringIO()
+    old = sys.stdout
+    try:
+        sys.stdout = buf
+        fc.onecmd("run_module plugin_echo alpha beta")
+    finally:
+        sys.stdout = old
+
+    assert "plugin module alpha beta" in buf.getvalue()
+
+
+def test_main_module_path_argument(truckdevil_module_env, tmp_path, monkeypatch):
+    module_dir = tmp_path / "modules"
+    module_dir.mkdir()
+    module_file = module_dir / "arg_echo.py"
+    module_file.write_text(
+        dedent(
+            """
+            def main_mod(argv, device):
+                print("arg module {}".format(" ".join(argv)))
+            """
+        ).strip()
+        + "\n"
+    )
+
+    cli_mod = _load_truckdevil_cli_module()
+    monkeypatch.delenv("TRUCKDEVIL_MODULE_PATH", raising=False)
+
+    buf = __import__("io").StringIO()
+    old = sys.stdout
+    try:
+        sys.stdout = buf
+        rc = cli_mod.main(
+            ["--module-path", str(module_dir), "run_module", "arg_echo", "hello"]
+        )
+    finally:
+        sys.stdout = old
+
+    assert rc == 0
+    assert "arg module hello" in buf.getvalue()
+
+
+def test_main_module_path_argument_requires_value(truckdevil_module_env):
+    cli_mod = _load_truckdevil_cli_module()
+
+    buf = __import__("io").StringIO()
+    old = sys.stdout
+    try:
+        sys.stdout = buf
+        rc = cli_mod.main(["--module-path"])
+    finally:
+        sys.stdout = old
+
+    assert rc == 1
+    assert "expected path" in buf.getvalue().lower()
