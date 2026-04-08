@@ -1,4 +1,4 @@
-from j1939.j1939 import J1939Message
+from truckdevil.j1939.j1939 import J1939Message
 
 
 class ECU:

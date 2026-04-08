@@ -1,5 +1,5 @@
-from j1939.j1939 import J1939Interface, J1939Message
-from libs.command import Command
+from truckdevil.j1939.j1939 import J1939Interface, J1939Message
+from truckdevil.libs.command import Command
 
 
 class SendCommands(Command):
@@ -41,7 +41,7 @@ class SendCommands(Command):
             else:
                 can_id = int(can_id)
         except ValueError as e:
-            print(f'Could not parse can id - error: {e}')
+            print(f"Could not parse can id - error: {e}")
             return
 
         data = argv[1]
@@ -49,13 +49,13 @@ class SendCommands(Command):
         try:
             message = J1939Message(can_id, data)
         except ValueError as e:
-            print(f'Invalid message - error: {e}')
+            print(f"Invalid message - error: {e}")
             return
         if len(argv) == 3:
             verbose = argv[2][1:].lower()
-            if verbose == 'v':
+            if verbose == "v":
                 print(str(message))
-            elif verbose == 'vv':
+            elif verbose == "vv":
                 print(self.devil.get_decoded_message(message))
             else:
                 print("third argument invalid, see 'help send'")
@@ -69,6 +69,7 @@ class SendCommands(Command):
         Return to the main menu
         """
         return True
+
 
 def main_mod(argv, device):
     scli = SendCommands(device)

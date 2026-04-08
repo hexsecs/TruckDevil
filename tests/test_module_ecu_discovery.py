@@ -1,4 +1,5 @@
 """Tests for ecu_discovery module with virtual device."""
+
 import io
 import sys
 import threading
@@ -15,8 +16,8 @@ def shared_channel():
 
 def test_ecu_discovery_view_ecus_no_ecus(truckdevil_module_env, shared_channel):
     """view_ecus with no ECUs: assert 'no ecu information stored' (or equivalent)."""
-    from libs.device import Device
-    import modules.ecu_discovery as ecu_discovery
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.ecu_discovery as ecu_discovery
 
     device = Device("virtual", None, shared_channel, 250000)
     try:
@@ -39,12 +40,12 @@ def test_ecu_discovery_view_ecus_no_ecus(truckdevil_module_env, shared_channel):
 
 def test_ecu_discovery_passive_scan_no_crash(truckdevil_module_env, shared_channel):
     """passive_scan with virtual bus; patch time.sleep to avoid 10s wait; assert no crash."""
-    from libs.device import Device
-    import modules.ecu_discovery as ecu_discovery
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.ecu_discovery as ecu_discovery
 
     device = Device("virtual", None, shared_channel, 250000)
     try:
-        with patch("modules.ecu_discovery.time.sleep"):
+        with patch("truckdevil.modules.ecu_discovery.time.sleep"):
             buf = __import__("io").StringIO()
             old = sys.stdout
             try:
@@ -52,7 +53,9 @@ def test_ecu_discovery_passive_scan_no_crash(truckdevil_module_env, shared_chann
                 ecu_discovery.main_mod(["passive_scan", "back"], device)
             finally:
                 sys.stdout = old
-        assert "scanning" in buf.getvalue().lower() or "complete" in buf.getvalue().lower()
+        assert (
+            "scanning" in buf.getvalue().lower() or "complete" in buf.getvalue().lower()
+        )
     finally:
         if device.can_bus is not None:
             try:
@@ -61,17 +64,20 @@ def test_ecu_discovery_passive_scan_no_crash(truckdevil_module_env, shared_chann
                 pass
 
 
-def test_ecu_discovery_active_scan_inject_response(truckdevil_module_env, shared_channel):
+def test_ecu_discovery_active_scan_inject_response(
+    truckdevil_module_env, shared_channel
+):
     """active_scan: inject Address Claimed response on virtual bus; assert at least one ECU or flow completes."""
     import threading
     import time
-    from libs.device import Device
-    from j1939.j1939 import J1939Interface, J1939Message
-    import modules.ecu_discovery as ecu_discovery
+    from truckdevil.j1939.j1939 import J1939Interface, J1939Message
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.ecu_discovery as ecu_discovery
 
     dev_main = Device("virtual", None, shared_channel, 250000)
     dev_inject = Device("virtual", None, shared_channel, 250000)
     try:
+
         def inject_address_claimed():
             time.sleep(0.2)
             # Address Claimed PGN 0x18EExxxx, response has PDU format 0xEE
@@ -81,7 +87,7 @@ def test_ecu_discovery_active_scan_inject_response(truckdevil_module_env, shared
 
         t = threading.Thread(target=inject_address_claimed)
         t.start()
-        with patch("modules.ecu_discovery.time.sleep"):
+        with patch("truckdevil.modules.ecu_discovery.time.sleep"):
             buf = __import__("io").StringIO()
             old = sys.stdout
             try:
@@ -103,9 +109,9 @@ def test_ecu_discovery_active_scan_inject_response(truckdevil_module_env, shared
 
 def test_ecu_discovery_save_load(truckdevil_module_env, shared_channel, tmp_path):
     """save ECU list to temp file, load; assert no crash."""
-    from libs.device import Device
-    from j1939.j1939 import J1939Interface, J1939Message
-    import modules.ecu_discovery as ecu_discovery
+    from truckdevil.j1939.j1939 import J1939Interface, J1939Message
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.ecu_discovery as ecu_discovery
 
     device = Device("virtual", None, shared_channel, 250000)
     f = tmp_path / "ecus.dill"
@@ -113,6 +119,7 @@ def test_ecu_discovery_save_load(truckdevil_module_env, shared_channel, tmp_path
         # Add one ECU via active_scan with injected response (quick)
         def inject():
             import time
+
             time.sleep(0.15)
             iface = J1939Interface(Device("virtual", None, shared_channel, 250000))
             try:
@@ -126,7 +133,7 @@ def test_ecu_discovery_save_load(truckdevil_module_env, shared_channel, tmp_path
 
         t = threading.Thread(target=inject)
         t.start()
-        with patch("modules.ecu_discovery.time.sleep"):
+        with patch("truckdevil.modules.ecu_discovery.time.sleep"):
             ecu_discovery.main_mod(["active_scan", "save", str(f), "back"], device)
         t.join(timeout=2)
         ecu_discovery.main_mod(["load", str(f), "view_ecus", "back"], device)
@@ -140,8 +147,8 @@ def test_ecu_discovery_save_load(truckdevil_module_env, shared_channel, tmp_path
 
 def test_ecu_discovery_find_boot_msg_smoke(truckdevil_module_env, shared_channel):
     """find_boot_msg: smoke test; mock input to 'q' to quit immediately; assert no crash."""
-    from libs.device import Device
-    import modules.ecu_discovery as ecu_discovery
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.ecu_discovery as ecu_discovery
 
     device = Device("virtual", None, shared_channel, 250000)
     try:
@@ -163,12 +170,12 @@ def test_ecu_discovery_find_boot_msg_smoke(truckdevil_module_env, shared_channel
 
 def test_ecu_discovery_request_pgn_smoke(truckdevil_module_env, shared_channel):
     """request_pgn: smoke test with address and PGN; no real responder; assert no crash."""
-    from libs.device import Device
-    import modules.ecu_discovery as ecu_discovery
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.ecu_discovery as ecu_discovery
 
     device = Device("virtual", None, shared_channel, 250000)
     try:
-        with patch("modules.ecu_discovery.time.sleep"):
+        with patch("truckdevil.modules.ecu_discovery.time.sleep"):
             buf = __import__("io").StringIO()
             old = sys.stdout
             try:
@@ -190,22 +197,24 @@ def test_ecu_discovery_request_pgn_smoke(truckdevil_module_env, shared_channel):
 
 
 def test_input_to_int_decimal(truckdevil_module_env):
-    from modules.ecu_discovery import input_to_int
+    from truckdevil.modules.ecu_discovery import input_to_int
+
     assert input_to_int("11") == 11
     assert input_to_int("0") == 0
     assert input_to_int("255") == 255
 
 
 def test_input_to_int_hex(truckdevil_module_env):
-    from modules.ecu_discovery import input_to_int
+    from truckdevil.modules.ecu_discovery import input_to_int
+
     assert input_to_int("0x0B") == 11
     assert input_to_int("0xFF") == 255
     assert input_to_int("0x00") == 0
 
 
 def test_ecu_discovery_class_add_and_get(truckdevil_module_env):
-    from modules.ecu_discovery import ECUDiscovery
-    from libs.ecu import ECU
+    from truckdevil.libs.ecu import ECU
+    from truckdevil.modules.ecu_discovery import ECUDiscovery
 
     ed = ECUDiscovery()
     assert ed.known_ecus == []
@@ -225,8 +234,8 @@ def test_ecu_discovery_class_add_and_get(truckdevil_module_env):
 
 
 def test_ecu_discovery_class_add_duplicate(truckdevil_module_env):
-    from modules.ecu_discovery import ECUDiscovery
-    from libs.ecu import ECU
+    from truckdevil.libs.ecu import ECU
+    from truckdevil.modules.ecu_discovery import ECUDiscovery
 
     ed = ECUDiscovery()
     ecu1 = ECU(11)
@@ -239,12 +248,12 @@ def test_ecu_discovery_class_add_duplicate(truckdevil_module_env):
 
 def test_ecu_discovery_find_proprietary_smoke(truckdevil_module_env, shared_channel):
     """find_proprietary with no matching messages prints a 'not found' message instead of crashing."""
-    from libs.device import Device
-    import modules.ecu_discovery as ecu_discovery
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.ecu_discovery as ecu_discovery
 
     device = Device("virtual", None, shared_channel, 250000)
     try:
-        with patch("modules.ecu_discovery.time.sleep"):
+        with patch("truckdevil.modules.ecu_discovery.time.sleep"):
             buf = io.StringIO()
             old = sys.stdout
             try:
@@ -263,12 +272,12 @@ def test_ecu_discovery_find_proprietary_smoke(truckdevil_module_env, shared_chan
 
 def test_ecu_discovery_find_uds_smoke(truckdevil_module_env, shared_channel):
     """find_uds: smoke test with patched sleep; no crash."""
-    from libs.device import Device
-    import modules.ecu_discovery as ecu_discovery
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.ecu_discovery as ecu_discovery
 
     device = Device("virtual", None, shared_channel, 250000)
     try:
-        with patch("modules.ecu_discovery.time.sleep"):
+        with patch("truckdevil.modules.ecu_discovery.time.sleep"):
             buf = io.StringIO()
             old = sys.stdout
             try:
@@ -277,7 +286,11 @@ def test_ecu_discovery_find_uds_smoke(truckdevil_module_env, shared_channel):
             finally:
                 sys.stdout = old
         out = buf.getvalue()
-        assert "Scanning" in out or "tester" in out.lower() or "did not respond" in out.lower()
+        assert (
+            "Scanning" in out
+            or "tester" in out.lower()
+            or "did not respond" in out.lower()
+        )
     finally:
         if device.can_bus is not None:
             try:
@@ -288,8 +301,8 @@ def test_ecu_discovery_find_uds_smoke(truckdevil_module_env, shared_channel):
 
 def test_ecu_discovery_missing_args(truckdevil_module_env, shared_channel):
     """Commands with missing arguments print help/error without crashing."""
-    from libs.device import Device
-    import modules.ecu_discovery as ecu_discovery
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.ecu_discovery as ecu_discovery
 
     device = Device("virtual", None, shared_channel, 250000)
     try:
@@ -297,13 +310,16 @@ def test_ecu_discovery_missing_args(truckdevil_module_env, shared_channel):
         old = sys.stdout
         try:
             sys.stdout = buf
-            ecu_discovery.main_mod([
-                "find_boot_msg",  # no address
-                "find_proprietary",  # no address
-                "find_uds",  # no address
-                "request_pgn",  # no address/pgn
-                "back",
-            ], device)
+            ecu_discovery.main_mod(
+                [
+                    "find_boot_msg",  # no address
+                    "find_proprietary",  # no address
+                    "find_uds",  # no address
+                    "request_pgn",  # no address/pgn
+                    "back",
+                ],
+                device,
+            )
         finally:
             sys.stdout = old
         out = buf.getvalue()

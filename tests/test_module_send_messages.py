@@ -1,4 +1,5 @@
 """Tests for send_messages module with virtual device."""
+
 import sys
 import uuid
 
@@ -12,14 +13,16 @@ def shared_channel():
 
 def test_send_messages_send_then_receive(truckdevil_module_env, shared_channel):
     """main_mod send 0x18EA00FF AABBCCDDEEFF0011 back; other endpoint receives and asserts CAN ID and data."""
-    from libs.device import Device
-    from j1939.j1939 import J1939Interface
-    import modules.send_messages as send_messages
+    from truckdevil.j1939.j1939 import J1939Interface
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.send_messages as send_messages
 
     dev_tx = Device("virtual", None, shared_channel, 250000)
     dev_rx = Device("virtual", None, shared_channel, 250000)
     try:
-        send_messages.main_mod(["send", "0x18EA00FF", "AABBCCDDEEFF0011", "back"], dev_tx)
+        send_messages.main_mod(
+            ["send", "0x18EA00FF", "AABBCCDDEEFF0011", "back"], dev_tx
+        )
         iface_rx = J1939Interface(dev_rx)
         received = iface_rx.read_one_message(timeout=1)
         assert received is not None
@@ -36,8 +39,8 @@ def test_send_messages_send_then_receive(truckdevil_module_env, shared_channel):
 
 def test_send_messages_verbose_dry_run(truckdevil_module_env, shared_channel):
     """send ... -v and -vv: no exception, decoded/printed output appears."""
-    from libs.device import Device
-    import modules.send_messages as send_messages
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.send_messages as send_messages
 
     device = Device("virtual", None, shared_channel, 250000)
     try:
@@ -45,7 +48,9 @@ def test_send_messages_verbose_dry_run(truckdevil_module_env, shared_channel):
         old = sys.stdout
         try:
             sys.stdout = buf
-            send_messages.main_mod(["send", "0x18EA00FF", "00112233", "-v", "back"], device)
+            send_messages.main_mod(
+                ["send", "0x18EA00FF", "00112233", "-v", "back"], device
+            )
         finally:
             sys.stdout = old
         out = buf.getvalue()
@@ -60,8 +65,8 @@ def test_send_messages_verbose_dry_run(truckdevil_module_env, shared_channel):
 
 def test_send_messages_invalid_args_no_data(truckdevil_module_env, shared_channel):
     """send 0x18EA00FF (no data): assert error message and no send (receiver gets nothing)."""
-    from libs.device import Device
-    import modules.send_messages as send_messages
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.send_messages as send_messages
 
     device = Device("virtual", None, shared_channel, 250000)
     try:
@@ -84,8 +89,8 @@ def test_send_messages_invalid_args_no_data(truckdevil_module_env, shared_channe
 
 def test_send_messages_bad_hex_can_id(truckdevil_module_env, shared_channel):
     """send 0xZZZZ AABB: prints error instead of crashing."""
-    from libs.device import Device
-    import modules.send_messages as send_messages
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.send_messages as send_messages
 
     device = Device("virtual", None, shared_channel, 250000)
     try:
@@ -108,8 +113,8 @@ def test_send_messages_bad_hex_can_id(truckdevil_module_env, shared_channel):
 
 def test_send_messages_bad_data_non_hex(truckdevil_module_env, shared_channel):
     """send 0x18EA00FF XYZ123: prints error instead of crashing."""
-    from libs.device import Device
-    import modules.send_messages as send_messages
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.send_messages as send_messages
 
     device = Device("virtual", None, shared_channel, 250000)
     try:
@@ -132,8 +137,8 @@ def test_send_messages_bad_data_non_hex(truckdevil_module_env, shared_channel):
 
 def test_send_messages_bad_data_odd_length(truckdevil_module_env, shared_channel):
     """send 0x18EA00FF AAB: prints error for odd-length hex data."""
-    from libs.device import Device
-    import modules.send_messages as send_messages
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.send_messages as send_messages
 
     device = Device("virtual", None, shared_channel, 250000)
     try:

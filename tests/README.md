@@ -7,6 +7,9 @@ Test suite for TruckDevil using **pytest** and python-can’s **virtual** CAN in
 From the repo root:
 
 ```bash
+uv run pytest tests/ -v
+
+# or, with pip / venv
 pip install -r requirements.txt pytest
 python -m pytest tests/ -v
 ```

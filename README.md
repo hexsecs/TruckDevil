@@ -17,6 +17,55 @@ However, python-can is used so any [supported CAN interface](https://python-can.
 Additional software is required to flash the m2_sketch firmware to the M2, if used (see Installation).
 
 ## Installation
+
+### From package indexes
+
+Once TruckDevil is published, install it directly from PyPI.
+
+CLI install with `uv`:
+
+```bash
+uv tool install truckdevil
+truckdevil --version
+```
+
+One-shot execution with `uvx`:
+
+```bash
+uvx truckdevil --version
+```
+
+Library or local-environment install with `pip`:
+
+```bash
+pip install truckdevil
+truckdevil --version
+```
+
+Optional pretty-printing support:
+
+```bash
+uv tool install 'truckdevil[pretty]'
+pip install 'truckdevil[pretty]'
+```
+
+### With uv (recommended)
+
+```bash
+> git clone https://github.com/LittleBlondeDevil/TruckDevil.git
+> cd TruckDevil
+> uv sync
+```
+
+Run the CLI from the project environment:
+
+```bash
+> uv run truckdevil --version
+> uv run truckdevil
+```
+
+### With pip / venv
+
 ```
 > git clone https://github.com/LittleBlondeDevil/TruckDevil.git
 > cd TruckDevil
@@ -56,6 +105,14 @@ Additional software is required to flash the m2_sketch firmware to the M2, if us
 
 From the repo root (uses a virtual CAN interface; no hardware required):
 
+With `uv`:
+
+```bash
+> uv run pytest tests/ -v
+```
+
+With `pip` / `venv`:
+
 ```
 > pip install pytest
 > python -m pytest tests/ -v
@@ -71,7 +128,7 @@ for more specific tasks.
 ### Getting Started
 * Interactively (example using M2; replace with `add_device virtual vcan0 250000` for no-hardware testing)
 ```
-> python truckdevil.py
+> uv run truckdevil
 Welcome to the truckdevil framework
 (truckdevil)?
 
@@ -122,7 +179,7 @@ help  load  print_messages  save  set  settings  unset
 ```
 * From command line (arguments are passed to module)
 ```
-> python .\truckdevil.py add_device m2 can0 250000 COM5 run_module read_messages set num_messages 5 print_messages
+> uv run truckdevil add_device m2 can0 250000 COM5 run_module read_messages set num_messages 5 print_messages
 18FECA00    06 FECA 00 --> FF [0008] 00FF00000000FFFF
 0CF00400    03 F004 00 --> FF [0008] F87D7D000000F07D
 18F00E00    06 F00E 00 --> FF [0008] FFFF285AFFFFFFFF
@@ -134,7 +191,7 @@ help  load  print_messages  save  set  settings  unset
 
 TruckDevil can integrate with the `pretty_j1939` project to provide high-performance, colorized, and searchable J1939 message rendering.
 
-The optional dependency must be installed using `pip install truckdevil[pretty]` to access this feature.
+The optional dependency can be installed with `pip install 'truckdevil[pretty]'` or `uv tool install 'truckdevil[pretty]'`.
 
 #### Settings:
 - `pretty` (boolean): Enable or disable pretty printing.

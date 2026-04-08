@@ -5,16 +5,32 @@ import copy
 import json
 import os
 import can
-from libs.pretty_shim import PrettyShim, DEFAULT_PRETTY_ARGS, MAGIC_TRUCKDEVIL
 
-def j1939_fields_to_can_id(priority, reserved_bit, data_page_bit, pdu_format, pdu_specific, src_addr):
-    return int(bin(priority)[2:].zfill(3) + bin(reserved_bit)[2:].zfill(1) +
-               bin(data_page_bit)[2:].zfill(1) + bin(pdu_format)[2:].zfill(8) + bin(pdu_specific)[2:].zfill(8) +
-               bin(src_addr)[2:].zfill(8), 2)
+from truckdevil.libs.pretty_shim import (
+    PrettyShim,
+    DEFAULT_PRETTY_ARGS,
+    MAGIC_TRUCKDEVIL,
+)
+
+
+def j1939_fields_to_can_id(
+    priority, reserved_bit, data_page_bit, pdu_format, pdu_specific, src_addr
+):
+    return int(
+        bin(priority)[2:].zfill(3)
+        + bin(reserved_bit)[2:].zfill(1)
+        + bin(data_page_bit)[2:].zfill(1)
+        + bin(pdu_format)[2:].zfill(8)
+        + bin(pdu_specific)[2:].zfill(8)
+        + bin(src_addr)[2:].zfill(8),
+        2,
+    )
 
 
 class J1939Interface:
-    def __init__(self, device, pretty_args=DEFAULT_PRETTY_ARGS, pretty_da_json=MAGIC_TRUCKDEVIL):
+    def __init__(
+        self, device, pretty_args=DEFAULT_PRETTY_ARGS, pretty_da_json=MAGIC_TRUCKDEVIL
+    ):
         """
         Initializes truckdevil
 
@@ -39,38 +55,33 @@ class J1939Interface:
 
         self.pgn_list = {}
         base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        json_dir = os.path.join(base_path, 'resources', 'json_files')
-        
-        with open(os.path.join(json_dir, 'pgn_list.json')) as pgn_file:
+        json_dir = os.path.join(base_path, "resources", "json_files")
+
+        with open(os.path.join(json_dir, "pgn_list.json")) as pgn_file:
             self.pgn_list = json.load(pgn_file)
 
         self.spn_list = {}
-        with open(os.path.join(json_dir, 'spn_list.json')) as spn_file:
+        with open(os.path.join(json_dir, "spn_list.json")) as spn_file:
             self.spn_list = json.load(spn_file)
 
         self.src_addr_list = {}
-        with open(os.path.join(json_dir, 'src_addr_list.json')) \
-                as src_addr_file:
+        with open(os.path.join(json_dir, "src_addr_list.json")) as src_addr_file:
             self.src_addr_list = json.load(src_addr_file)
 
         self.bit_decoding_list = {}
-        with open(os.path.join(json_dir, 'dataBitDecoding.json')) \
-                as bit_decoding_file:
+        with open(os.path.join(json_dir, "dataBitDecoding.json")) as bit_decoding_file:
             self.bit_decoding_list = json.load(bit_decoding_file)
 
         self.uds_services_list = {}
-        with open(os.path.join(json_dir, 'UDS_services.json')) \
-                as UDS_services_file:
+        with open(os.path.join(json_dir, "UDS_services.json")) as UDS_services_file:
             self.uds_services_list = json.load(UDS_services_file)
 
         self.uds_functions_list = {}
-        with open(os.path.join(json_dir, 'UDS_functions.json')) \
-                as UDS_functions_file:
+        with open(os.path.join(json_dir, "UDS_functions.json")) as UDS_functions_file:
             self.uds_functions_list = json.load(UDS_functions_file)
 
         self.uds_nrc_list = {}
-        with open(os.path.join(json_dir, 'UDS_NRC.json')) \
-                as UDS_NRC_file:
+        with open(os.path.join(json_dir, "UDS_NRC.json")) as UDS_NRC_file:
             self.uds_nrc_list = json.load(UDS_NRC_file)
 
         self.pretty_shim = PrettyShim(self, pretty_args, pretty_da_json)
@@ -78,7 +89,7 @@ class J1939Interface:
     def update_pretty_settings(self, arg_string, da_json_source=MAGIC_TRUCKDEVIL):
         """
         Updates the pretty_j1939 describer and renderer settings based on an argument string.
-        
+
         :param arg_string: string of pretty_j1939 CLI arguments
         :param da_json_source: source for J1939 definitions. MAGIC_TRUCKDEVIL for in-memory conversion or a filename.
         """
@@ -111,8 +122,18 @@ class J1939Interface:
         """Used by internal timer for printMessages function."""
         self._print_messages_time_done = True
 
-    def print_messages(self, abstract_tpm=True, read_time=None, num_messages=None, verbose=False, log_to_file=False,
-                       file_name=None, candump=False, pretty=False, **filters):
+    def print_messages(
+        self,
+        abstract_tpm=True,
+        read_time=None,
+        num_messages=None,
+        verbose=False,
+        log_to_file=False,
+        file_name=None,
+        candump=False,
+        pretty=False,
+        **filters,
+    ):
         """
         Read and print messages from device based on optional filters provided.
         Each filter is a list, messages are only read if it satisfies every filter condition.
@@ -142,7 +163,7 @@ class J1939Interface:
         """
         # Only allow if data collection is not occurring
         if self.data_collection_occurring:
-            raise Exception('stop data collection before proceeding with this function')
+            raise Exception("stop data collection before proceeding with this function")
         # If optional readTime is utilized
         if read_time is not None:
             self._print_messages_timer = threading.Timer(
@@ -155,12 +176,12 @@ class J1939Interface:
         # Log to file
         if log_to_file:
             if file_name is None:
-                file_name = 'log_{}.txt'.format(str(int(time.time())))
+                file_name = "log_{}.txt".format(str(int(time.time())))
             log_file = open(file_name, "x")
-            #log_file.write(
+            # log_file.write(
             #    """Priority    PGN    Source --> Destination
             #    [Num Bytes]    data""" + '\n'
-            #)
+            # )
         can_id = filters.setdefault("can_id", [])
         priority = filters.setdefault("priority", [])
         pdu_format = filters.setdefault("pdu_format", [])
@@ -173,7 +194,9 @@ class J1939Interface:
         # Keep printing while our timer isn't done or the number of
         # messages to print hasn't been reached (whichever comes first).
         # If neither are utilized, keep going forever
-        while self._print_messages_time_done is False and (num_messages is None or messages_printed < num_messages):
+        while self._print_messages_time_done is False and (
+            num_messages is None or messages_printed < num_messages
+        ):
             # Only allow if data collection is not occurring
             if self.data_collection_occurring:
                 raise Exception(
@@ -181,12 +204,20 @@ class J1939Interface:
                     before proceeding with this function"""
                 )
             j1939_message = self.read_one_message(abstract_tpm, self.m_manager)
-            if not ((len(can_id) == 0 or j1939_message.can_id in can_id) and
-                    (len(priority) == 0 or j1939_message.priority in priority) and
-                    (len(pdu_format) == 0 or j1939_message.pdu_format in pdu_format) and
-                    (len(pdu_specific) == 0 or j1939_message.pdu_specific in pdu_specific) and
-                    (len(src_addr) == 0 or j1939_message.src_addr in src_addr) and
-                    (len(data_snippet) == 0 or True in [i.upper() in j1939_message.data.upper() for i in data_snippet])):
+            if not (
+                (len(can_id) == 0 or j1939_message.can_id in can_id)
+                and (len(priority) == 0 or j1939_message.priority in priority)
+                and (len(pdu_format) == 0 or j1939_message.pdu_format in pdu_format)
+                and (
+                    len(pdu_specific) == 0 or j1939_message.pdu_specific in pdu_specific
+                )
+                and (len(src_addr) == 0 or j1939_message.src_addr in src_addr)
+                and (
+                    len(data_snippet) == 0
+                    or True
+                    in [i.upper() in j1939_message.data.upper() for i in data_snippet]
+                )
+            ):
                 continue
             # Print/log the message
             if not verbose and not pretty:
@@ -195,10 +226,10 @@ class J1939Interface:
                     # Write the J1939 message to the log file if enabled
                     if log_to_file:
                         try:
-                            log_file.write(str(j1939_message) + '\n')
+                            log_file.write(str(j1939_message) + "\n")
                         except Exception as e:
                             # Print the error if unable to write to the log file
-                            print(f'error writing to log file: {e}')
+                            print(f"error writing to log file: {e}")
                 else:
                     if j1939_message.total_bytes < 9:
                         try:
@@ -206,15 +237,15 @@ class J1939Interface:
                             output = self.get_candump(j1939_message)
                         except Exception as e:
                             # Print the error if unable to decode the message
-                            print(f'error decoding message: {e}')
+                            print(f"error decoding message: {e}")
                         print(output)
                         if log_to_file:
                             try:
                                 # Write the candump representation of the J1939 message to the log file
-                                log_file.write(output + '\n')
+                                log_file.write(output + "\n")
                             except Exception as e:
                                 # Print the error if unable to write to the log file
-                                print(f'error writing to log file: {e}')
+                                print(f"error writing to log file: {e}")
             elif pretty:
                 try:
                     # Get the pretty message and print it
@@ -222,36 +253,36 @@ class J1939Interface:
                     print(output)
                 except Exception as e:
                     # Print the error if unable to pretty print the message
-                    print(f'error pretty printing message: {e}')
+                    print(f"error pretty printing message: {e}")
                 if log_to_file:
                     try:
                         # Write the pretty message to the log file
-                        log_file.write(output + '\n')
+                        log_file.write(output + "\n")
                     except Exception as e:
                         # Print the error if unable to write to the log file
-                        print(f'error writing to log file: {e}')
+                        print(f"error writing to log file: {e}")
             else:
                 try:
                     # Get the decoded message and print it
                     output = self.get_decoded_message(j1939_message)
                 except Exception as e:
                     # Print the error if unable to decode the message
-                    print(f'error decoding message: {e}')
+                    print(f"error decoding message: {e}")
                 print(output)
                 if log_to_file:
                     try:
                         # Write the decoded message to the log file
-                        log_file.write(output + '\n')
+                        log_file.write(output + "\n")
                     except Exception as e:
                         # Print the error if unable to write to the log file
-                        print(f'error writing to log file: {e}')
+                        print(f"error writing to log file: {e}")
             messages_printed = messages_printed + 1
         # Close the log file before exiting
         if log_to_file:
             log_file.close()
         if read_time is not None:
             self._print_messages_timer.cancel()
-        
+
         if pretty:
             self.pretty_shim.print_summary()
 
@@ -285,7 +316,9 @@ class J1939Interface:
         collected_messages = []
         manager = MessageManagement(rts_response_addr=rts_response_addr)
         while True:
-            j1939_message = self.read_one_message(abstract_tpm=False, message_manager=manager)
+            j1939_message = self.read_one_message(
+                abstract_tpm=False, message_manager=manager
+            )
             collected_messages.append(j1939_message)
             matched = True
             for param in params:
@@ -299,7 +332,10 @@ class J1939Interface:
                 if param == "reserved_bit" and j1939_message.reserved_bit != target_val:
                     matched = False
                     break
-                if param == "data_page_bit" and j1939_message.data_page_bit != target_val:
+                if (
+                    param == "data_page_bit"
+                    and j1939_message.data_page_bit != target_val
+                ):
                     matched = False
                     break
                 if param == "pdu_format" and j1939_message.pdu_format != target_val:
@@ -311,7 +347,10 @@ class J1939Interface:
                 if param == "src_addr" and j1939_message.src_addr != target_val:
                     matched = False
                     break
-                if param == "data_contains" and target_val.upper() not in j1939_message.data.upper():
+                if (
+                    param == "data_contains"
+                    and target_val.upper() not in j1939_message.data.upper()
+                ):
                     matched = False
                     break
             if matched:
@@ -335,7 +374,7 @@ class J1939Interface:
             data_snippet: list of hex strings, only read messages containing one of these data snippets, ex: "0102AABB"
         """
         if self._data_collection_occurring:
-            raise Exception('data collection already started')
+            raise Exception("data collection already started")
 
         # Wait until the previous collection thread has stopped
         if self._collection_thread is not None and self._collection_thread.is_alive():
@@ -344,8 +383,12 @@ class J1939Interface:
         self._clear_collected_messages()
 
         self._data_collection_occurring = True
-        self._collection_thread = threading.Thread(target=self._read_message, args=(abstract_tpm, 0.5), kwargs=filters,
-                                                   daemon=True)
+        self._collection_thread = threading.Thread(
+            target=self._read_message,
+            args=(abstract_tpm, 0.5),
+            kwargs=filters,
+            daemon=True,
+        )
         self._collection_thread.start()
 
     def stop_data_collection(self):
@@ -355,14 +398,22 @@ class J1939Interface:
         :returns: the collected_messages list
         """
         if not self._data_collection_occurring:
-            raise Exception('data collection is already stopped')
+            raise Exception("data collection is already stopped")
         self._data_collection_occurring = False
+
+        # Let the background reader exit before callers tear down CAN buses.
+        if self._collection_thread is not None and self._collection_thread.is_alive():
+            self._collection_thread.join()
+
+        self._collection_thread = None
         self.m_manager.reset_conversations()
         data_collected = self.get_collected_data()
         self._clear_collected_messages()
         return data_collected
 
-    def save_data_collected(self, messages, file_name=None, verbose=False, pretty=False):
+    def save_data_collected(
+        self, messages, file_name=None, verbose=False, pretty=False
+    ):
         """
         Save the collected messages to a log file
 
@@ -373,11 +424,13 @@ class J1939Interface:
                         Mutually exclusive with verbose; if both are True, pretty takes priority.
         """
         if len(messages) == 0:
-            raise Exception('messages list is empty')
+            raise Exception("messages list is empty")
         if file_name is None:
-            file_name = 'log_{}.txt'.format(str(int(time.time())))
+            file_name = "log_{}.txt".format(str(int(time.time())))
         with open(file_name, "x") as f:
-            f.write("Timestamp    CAN_ID    Priority    PGN    Source --> Destination    [Num Bytes]    data\n")
+            f.write(
+                "Timestamp    CAN_ID    Priority    PGN    Source --> Destination    [Num Bytes]    data\n"
+            )
             for m in messages:
                 if pretty:
                     f.write("{}\n".format(self.pretty_shim.get_pretty_output(m)))
@@ -397,28 +450,22 @@ class J1939Interface:
         """
         messages = []
         if os.path.exists(file_name):
-            with open(file_name, 'r') as inFile:
+            with open(file_name, "r") as inFile:
                 first_line = True
                 for line in inFile:
                     if first_line:
                         first_line = False
                         continue
                     parts = line.split()
-                    if len(parts) == 9 and parts[5] == '-->' and '[' in line:
-                        message = J1939Message(
-                            can_id=int(parts[1], 16),
-                            data=parts[8]
-                        )
+                    if len(parts) == 9 and parts[5] == "-->" and "[" in line:
+                        message = J1939Message(can_id=int(parts[1], 16), data=parts[8])
                         messages.append(message)
-                    elif len(parts) == 8 and parts[4] == '-->' and '[' in line:
-                        message = J1939Message(
-                            can_id=int(parts[0], 16),
-                            data=parts[7]
-                        )
+                    elif len(parts) == 8 and parts[4] == "-->" and "[" in line:
+                        message = J1939Message(can_id=int(parts[0], 16), data=parts[7])
                         messages.append(message)
             return messages
         else:
-            raise Exception('file name given does not exist.')
+            raise Exception("file name given does not exist.")
 
     def _read_message(self, abstract_tpm=True, timeout=None, **filters):
         """
@@ -452,15 +499,27 @@ class J1939Interface:
             # Keep the thread from executing if not in collection state
             if not self.data_collection_occurring:
                 break
-            j1939_message = self.read_one_message(abstract_tpm, self.m_manager, timeout)
+            try:
+                j1939_message = self.read_one_message(
+                    abstract_tpm, self.m_manager, timeout
+                )
+            except can.CanOperationError:
+                break
             if j1939_message is None:
                 continue  # timeout occurred
-            if ((len(can_id) == 0 or j1939_message.can_id in can_id) and
-                    (len(priority) == 0 or j1939_message.priority in priority) and
-                    (len(pdu_format) == 0 or j1939_message.pdu_format in pdu_format) and
-                    (len(pdu_specific) == 0 or j1939_message.pdu_specific in pdu_specific) and
-                    (len(src_addr) == 0 or j1939_message.src_addr in src_addr) and
-                    (len(data_snippet) == 0 or True in [i in j1939_message.data for i in data_snippet])):
+            if (
+                (len(can_id) == 0 or j1939_message.can_id in can_id)
+                and (len(priority) == 0 or j1939_message.priority in priority)
+                and (len(pdu_format) == 0 or j1939_message.pdu_format in pdu_format)
+                and (
+                    len(pdu_specific) == 0 or j1939_message.pdu_specific in pdu_specific
+                )
+                and (len(src_addr) == 0 or j1939_message.src_addr in src_addr)
+                and (
+                    len(data_snippet) == 0
+                    or True in [i in j1939_message.data for i in data_snippet]
+                )
+            ):
                 self._add_to_collected_messages(j1939_message)
 
     def read_one_message(self, abstract_tpm=False, message_manager=None, timeout=None):
@@ -483,47 +542,60 @@ class J1939Interface:
             can_msg = self.device.read(timeout=timeout)
             if can_msg is None:
                 return None  # timeout occurred
-            data = ''.join('{:02x}'.format(x) for x in can_msg.data)
+            data = "".join("{:02x}".format(x) for x in can_msg.data)
             j1939_message = J1939Message(can_msg.arbitration_id, data)
-            j1939_message.timestamp = can_msg.timestamp 
+            j1939_message.timestamp = can_msg.timestamp
 
             # Multipacket message received, broadcasted or peer-to-peer request to send
-            if j1939_message.pdu_format == 0xec and (j1939_message.data[0:2] == "20" or j1939_message.data[0:2] == "10"):
+            if j1939_message.pdu_format == 0xEC and (
+                j1939_message.data[0:2] == "20" or j1939_message.data[0:2] == "10"
+            ):
                 mp_message = _J1939MultiPacketMessage(j1939_message)
                 message_manager.add_new_conversation(mp_message)
-                if message_manager.respond_rts and j1939_message.pdu_specific == message_manager.rts_response_addr and \
-                        j1939_message.data[0:2] == "10":
-                    data = "11{}01FFFF{}".format(j1939_message.data[6:8], j1939_message.data[10:16])
+                if (
+                    message_manager.respond_rts
+                    and j1939_message.pdu_specific == message_manager.rts_response_addr
+                    and j1939_message.data[0:2] == "10"
+                ):
+                    data = "11{}01FFFF{}".format(
+                        j1939_message.data[6:8], j1939_message.data[10:16]
+                    )
                     tmp = J1939Message(j1939_message.can_id, data)
                     tmp.src_addr = message_manager.rts_response_addr
                     tmp.pdu_specific = j1939_message.src_addr
                     self.send_message(tmp)
                 if abstract_tpm:
                     continue
-            elif j1939_message.pdu_format == 0xec and abstract_tpm:
+            elif j1939_message.pdu_format == 0xEC and abstract_tpm:
                 continue
 
             # Multipacket data transfer message received
-            elif j1939_message.pdu_format == 0xeb:
+            elif j1939_message.pdu_format == 0xEB:
                 message_manager.add_to_existing_conversation(j1939_message)
                 if abstract_tpm:
                     continue
 
             # UDS ISO-TP message received, first frame
-            elif (j1939_message.pdu_format == 0xda or j1939_message.pdu_format == 0xdb) and j1939_message.data[0:1] == '1':
+            elif (
+                j1939_message.pdu_format == 0xDA or j1939_message.pdu_format == 0xDB
+            ) and j1939_message.data[0:1] == "1":
                 iso_tp_message = _J1939ISOTPMessage(j1939_message)
                 message_manager.add_new_isotp_conversation(iso_tp_message)
                 if abstract_tpm:
                     continue
 
             # UDS ISO-TP message received, consecutive frame
-            elif (j1939_message.pdu_format == 0xda or j1939_message.pdu_format == 0xdb) and j1939_message.data[0:1] == '2':
+            elif (
+                j1939_message.pdu_format == 0xDA or j1939_message.pdu_format == 0xDB
+            ) and j1939_message.data[0:1] == "2":
                 message_manager.add_to_existing_isotp_conversation(j1939_message)
                 if abstract_tpm:
                     continue
 
             # UDS ISO-TP message received, flow control frame
-            elif (j1939_message.pdu_format == 0xda or j1939_message.pdu_format == 0xdb) and j1939_message.data[0:1] == '3':
+            elif (
+                j1939_message.pdu_format == 0xDA or j1939_message.pdu_format == 0xDB
+            ) and j1939_message.data[0:1] == "3":
                 if abstract_tpm:
                     continue
             return j1939_message
@@ -565,13 +637,30 @@ class J1939Interface:
                     control_id = "20"  # broadcast range, do BAM
                     dst_addr = 0xFF
 
-            control_message = "{}{}{}{:02X}FF{:02X}{:02X}00".format(control_id, num_bytes[2:4], num_bytes[0:2],
-                                                                    num_packets, dst_pdu_specific, dst_pdu_format)
+            control_message = "{}{}{}{:02X}FF{:02X}{:02X}00".format(
+                control_id,
+                num_bytes[2:4],
+                num_bytes[0:2],
+                num_packets,
+                dst_pdu_specific,
+                dst_pdu_format,
+            )
 
             # create transport protocol connection management can_id
-            can_id = j1939_fields_to_can_id(message.priority, message.reserved_bit, message.data_page_bit, 0xEC,
-                                            dst_addr, message.src_addr)
-            msg = can.Message(arbitration_id=can_id, is_extended_id=True, dlc=8, data=bytes.fromhex(control_message))
+            can_id = j1939_fields_to_can_id(
+                message.priority,
+                message.reserved_bit,
+                message.data_page_bit,
+                0xEC,
+                dst_addr,
+                message.src_addr,
+            )
+            msg = can.Message(
+                arbitration_id=can_id,
+                is_extended_id=True,
+                dlc=8,
+                data=bytes.fromhex(control_message),
+            )
             with self.device.device_lock:
                 # Send BAM or RTS message
                 self.device.send(msg)
@@ -583,27 +672,42 @@ class J1939Interface:
                 time.sleep(0.15)
 
             # create transport protocol data transfer can_id
-            can_id = j1939_fields_to_can_id(message.priority, message.reserved_bit, message.data_page_bit, 0xEB,
-                                            dst_addr, message.src_addr)
+            can_id = j1939_fields_to_can_id(
+                message.priority,
+                message.reserved_bit,
+                message.data_page_bit,
+                0xEB,
+                dst_addr,
+                message.src_addr,
+            )
             for i in range(0, num_packets):
                 # If a full 7 bytes is available
                 if (i * 7) < data_bytes - data_bytes % 7:
-                    seven_bytes = message.data[i * 14:(i * 14) + 14]
+                    seven_bytes = message.data[i * 14 : (i * 14) + 14]
                 # Pad remaining last packet with FF for data
                 else:
-                    seven_bytes = (message.data[i * 14:(i * 14) + ((data_bytes % 7) * 2)]
-                                   + "FF" * (7 - (data_bytes % 7)))
+                    seven_bytes = message.data[
+                        i * 14 : (i * 14) + ((data_bytes % 7) * 2)
+                    ] + "FF" * (7 - (data_bytes % 7))
                 data_transfer = "%02X" % (i + 1)
                 data_transfer += seven_bytes
-                msg = can.Message(arbitration_id=can_id, is_extended_id=True, dlc=8, data=bytes.fromhex(data_transfer))
+                msg = can.Message(
+                    arbitration_id=can_id,
+                    is_extended_id=True,
+                    dlc=8,
+                    data=bytes.fromhex(data_transfer),
+                )
                 with self.device.device_lock:
                     self.device.send(msg)
                 time.sleep(0.01)
 
         # Sending non-multipacket message - if number of bytes to send is less than or equal to 8
         else:
-            msg = can.Message(arbitration_id=message.can_id, is_extended_id=True,
-                              data=bytes.fromhex(message.data))
+            msg = can.Message(
+                arbitration_id=message.can_id,
+                is_extended_id=True,
+                data=bytes.fromhex(message.data),
+            )
 
             with self.device.device_lock:
                 self.device.send(msg)
@@ -616,9 +720,13 @@ class J1939Interface:
         :returns: the decoded message as a string
         """
         if isinstance(message, J1939Message) is False or message is None:
-            raise Exception('Must include an instance of a J1939_Message')
-        return "({:6f}) {} {:08X}#{:<}".format(message.timestamp, self.device._channel, message.can_id, message.data.upper())
-
+            raise Exception("Must include an instance of a J1939_Message")
+        return "({:6f}) {} {:08X}#{:<}".format(
+            message.timestamp,
+            self.device._channel,
+            message.can_id,
+            message.data.upper(),
+        )
 
     def get_decoded_message(self, message=None):
         """
@@ -628,65 +736,74 @@ class J1939Interface:
         :returns: the decoded message as a string
         """
         if isinstance(message, J1939Message) is False or message is None:
-            raise Exception('Must include an instance of a J1939_Message')
-        decoded = str(message) + '\n'
+            raise Exception("Must include an instance of a J1939_Message")
+        decoded = str(message) + "\n"
         # Only include this portion if src and dest addrs are in list
-        if (str(message.src_addr) in self.src_addr_list) and (str(message.dst_addr) in self.src_addr_list):
+        if (str(message.src_addr) in self.src_addr_list) and (
+            str(message.dst_addr) in self.src_addr_list
+        ):
             decoded += (
-                    '    ' + self.src_addr_list[str(message.src_addr)] +
-                    " --> " + self.src_addr_list[str(message.dst_addr)] +
-                    '\n'
+                "    "
+                + self.src_addr_list[str(message.src_addr)]
+                + " --> "
+                + self.src_addr_list[str(message.dst_addr)]
+                + "\n"
             )
         # Only include this portion if the pgn of the message is in pgn_list
         if str(message.pgn) in self.pgn_list:
             decoded += (
-                    '    PGN(' + str(message.pgn) + '): ' +
-                    self.pgn_list[str(message.pgn)]['acronym'] +
-                    '\n'
+                "    PGN("
+                + str(message.pgn)
+                + "): "
+                + self.pgn_list[str(message.pgn)]["acronym"]
+                + "\n"
             )
             decoded += (
-                    '      Label: ' +
-                    self.pgn_list[str(message.pgn)]['parameterGroupLabel'] +
-                    '\n'
+                "      Label: "
+                + self.pgn_list[str(message.pgn)]["parameterGroupLabel"]
+                + "\n"
             )
             if message.pgn == 0xDA00:
                 try:
                     decoded += self._uds_decode(message)
                 except (ValueError, UnboundLocalError):
-                    decoded += '      Cannot decode UDS message, incorrect form'
+                    decoded += "      Cannot decode UDS message, incorrect form"
                 return decoded
             decoded += (
-                    '      PGNDataLength: ' +
-                    str(self.pgn_list[str(message.pgn)]['pgnDataLength']) +
-                    '\n'
+                "      PGNDataLength: "
+                + str(self.pgn_list[str(message.pgn)]["pgnDataLength"])
+                + "\n"
             )
             decoded += (
-                    '      TransmissionRate: ' +
-                    self.pgn_list[str(message.pgn)]['transmissionRate'] +
-                    '\n'
+                "      TransmissionRate: "
+                + self.pgn_list[str(message.pgn)]["transmissionRate"]
+                + "\n"
             )
             # Only decode data if it matches the num bytes it's supposed to
-            if (self.pgn_list[str(message.pgn)]['pgnDataLength']
-                    == len(message.data) / 2):
+            if (
+                self.pgn_list[str(message.pgn)]["pgnDataLength"]
+                == len(message.data) / 2
+            ):
                 # For each spn that is part the given pgn
-                for spn in self.pgn_list[str(message.pgn)]['spnList']:
+                for spn in self.pgn_list[str(message.pgn)]["spnList"]:
                     # Only include this portion if the spn is in the spn_list
                     if str(spn) in self.spn_list:
                         decoded += (
-                                '      SPN(' +
-                                str(spn) + '): ' +
-                                self.spn_list[str(spn)]['spnName'] +
-                                '\n'
+                            "      SPN("
+                            + str(spn)
+                            + "): "
+                            + self.spn_list[str(spn)]["spnName"]
+                            + "\n"
                         )
                         # Ensure it's not a variable length SPN
-                        if (self.spn_list[str(spn)]['spnLength']
-                                != "variable"):
-                            total_bits = self.spn_list[str(spn)]['spnLength']
-                            start_bit = self.spn_list[str(spn)]['bitPositionStart']
+                        if self.spn_list[str(spn)]["spnLength"] != "variable":
+                            total_bits = self.spn_list[str(spn)]["spnLength"]
+                            start_bit = self.spn_list[str(spn)]["bitPositionStart"]
                             end_bit = start_bit + total_bits
 
-                            bin_data_total = bin(int(message.data, 16))[2:] \
-                                .zfill(int((len(message.data) / 2) * 8))
+                            bin_data_total = bin(int(message.data, 16))[2:].zfill(
+                                int((len(message.data) / 2) * 8)
+                            )
                             bin_data = bin_data_total[start_bit:end_bit]
                             extracted_data = int(bin_data, 2)
                             # Swap endianness if greater then 1
@@ -701,44 +818,73 @@ class J1939Interface:
                                 # print(f'extracted_data: {extracted_data:d}')
 
                             if 8 < total_bits <= 16:  # (2 bytes)
-                                extracted_data = int.from_bytes(extracted_data.to_bytes(2, byteorder='little'),
-                                                                byteorder='big', signed=False)
+                                extracted_data = int.from_bytes(
+                                    extracted_data.to_bytes(2, byteorder="little"),
+                                    byteorder="big",
+                                    signed=False,
+                                )
                             if 16 < total_bits <= 24:  # (3 bytes)
-                                extracted_data = int.from_bytes(extracted_data.to_bytes(3, byteorder='little'),
-                                                                byteorder='big', signed=False)
+                                extracted_data = int.from_bytes(
+                                    extracted_data.to_bytes(3, byteorder="little"),
+                                    byteorder="big",
+                                    signed=False,
+                                )
                             if 24 < total_bits <= 32:  # (4 bytes)
-                                extracted_data = int.from_bytes(extracted_data.to_bytes(4, byteorder='little'),
-                                                                byteorder='big', signed=False)
+                                extracted_data = int.from_bytes(
+                                    extracted_data.to_bytes(4, byteorder="little"),
+                                    byteorder="big",
+                                    signed=False,
+                                )
                             if 32 < total_bits <= 40:  # (5 bytes)
-                                extracted_data = int.from_bytes(extracted_data.to_bytes(5, byteorder='little'),
-                                                                byteorder='big', signed=False)
+                                extracted_data = int.from_bytes(
+                                    extracted_data.to_bytes(5, byteorder="little"),
+                                    byteorder="big",
+                                    signed=False,
+                                )
                             if 48 < total_bits <= 56:  # (6 bytes)
-                                extracted_data = int.from_bytes(extracted_data.to_bytes(6, byteorder='little'),
-                                                                byteorder='big', signed=False)
+                                extracted_data = int.from_bytes(
+                                    extracted_data.to_bytes(6, byteorder="little"),
+                                    byteorder="big",
+                                    signed=False,
+                                )
                             if 56 < total_bits <= 64:  # (7 bytes)
-                                extracted_data = int.from_bytes(extracted_data.to_bytes(7, byteorder='little'),
-                                                                byteorder='big', signed=False)
+                                extracted_data = int.from_bytes(
+                                    extracted_data.to_bytes(7, byteorder="little"),
+                                    byteorder="big",
+                                    signed=False,
+                                )
 
                             # If all 1's, don't care about value, don't add
-                            if extracted_data != int("1" * total_bits, 2) or total_bits == 1:
+                            if (
+                                extracted_data != int("1" * total_bits, 2)
+                                or total_bits == 1
+                            ):
                                 # If bit data type, use bit_decoding_list
-                                if (self.spn_list[str(spn)]['units'] == 'bit'
-                                        and str(spn)
-                                        in self.bit_decoding_list):
+                                if (
+                                    self.spn_list[str(spn)]["units"] == "bit"
+                                    and str(spn) in self.bit_decoding_list
+                                ):
                                     decoded += (
-                                            '        ' + str(int(bin_data, 2)) +
-                                            ' : ' +
-                                            self.bit_decoding_list[str(spn)][str(int(bin_data, 2))] +
-                                            '\n'
+                                        "        "
+                                        + str(int(bin_data, 2))
+                                        + " : "
+                                        + self.bit_decoding_list[str(spn)][
+                                            str(int(bin_data, 2))
+                                        ]
+                                        + "\n"
                                     )
                                 # if ascii data type, convert
-                                elif self.spn_list[str(spn)]['units'] == 'ASCII':
+                                elif self.spn_list[str(spn)]["units"] == "ASCII":
                                     try:
-                                        to_ascii = extracted_data.to_bytes(len(bin_data) // 8, byteorder='big')
+                                        to_ascii = extracted_data.to_bytes(
+                                            len(bin_data) // 8, byteorder="big"
+                                        )
                                         decoded += (
-                                                '        ' + bin_data +
-                                                ' : ' + str(to_ascii, 'latin-1') +
-                                                '\n'
+                                            "        "
+                                            + bin_data
+                                            + " : "
+                                            + str(to_ascii, "latin-1")
+                                            + "\n"
                                         )
                                     except UnicodeDecodeError:
                                         continue
@@ -746,11 +892,16 @@ class J1939Interface:
                                     # Multiply by the resolution and add offset to get appropriate range
                                     try:
                                         extracted_data = (
-                                                (extracted_data *
-                                                 (self.spn_list[str(spn)]['resolutionNumerator'] /
-                                                  self.spn_list[str(spn)]['resolutionDenominator'])) +
-                                                self.spn_list[str(spn)]['offset']
-                                        )
+                                            extracted_data
+                                            * (
+                                                self.spn_list[str(spn)][
+                                                    "resolutionNumerator"
+                                                ]
+                                                / self.spn_list[str(spn)][
+                                                    "resolutionDenominator"
+                                                ]
+                                            )
+                                        ) + self.spn_list[str(spn)]["offset"]
                                     except TypeError:
                                         continue
                                     if extracted_data.is_integer():
@@ -758,14 +909,15 @@ class J1939Interface:
                                     else:
                                         extracted_data = "%.2f" % extracted_data
                                     decoded += (
-                                            '        ' + str(extracted_data) +
-                                            ' ' +
-                                            self.spn_list[str(spn)]['units'] +
-                                            '\n'
+                                        "        "
+                                        + str(extracted_data)
+                                        + " "
+                                        + self.spn_list[str(spn)]["units"]
+                                        + "\n"
                                     )
             # Otherwise add a message that it's not the correct form
             else:
-                decoded += '      Cannot decode SPNs\n'
+                decoded += "      Cannot decode SPNs\n"
         return decoded
 
     def _uds_decode(self, message):
@@ -773,84 +925,90 @@ class J1939Interface:
         Takes in J1939_message and return the decoded string
         For internal function use.
         """
-        decoded = ''
+        decoded = ""
         # Frame type is first nibble
         frame_type = message.data[0:1]
         # 0 is single frame
-        if frame_type == '0':
+        if frame_type == "0":
             # Size is between 0 and 7 bytes
             size = int(message.data[1:2], 16)
             service_id = message.data[2:4].upper()
-            uds_data = message.data[4:2 + (size * 2)].upper()
+            uds_data = message.data[4 : 2 + (size * 2)].upper()
         # 1 is first frame - don't decode data
-        elif frame_type == '1':
+        elif frame_type == "1":
             # Size is between 8 and 4095 bytes
             size = int(message.data[1:4], 16)
             decoded += (
-                    '      Type: First frame, indicating ' +
-                    str(size) +
-                    ' bytes of an incoming message' +
-                    '\n'
+                "      Type: First frame, indicating "
+                + str(size)
+                + " bytes of an incoming message"
+                + "\n"
             )
             return decoded
         # 2 is consecutive frame
-        elif frame_type == '2':
+        elif frame_type == "2":
             # Index is between 0 and 15
             data_index = int(message.data[1:2], 16)
             decoded += (
-                    '      Type: Consecutive frame, indicating this is index ' +
-                    str(data_index) +
-                    '\n'
+                "      Type: Consecutive frame, indicating this is index "
+                + str(data_index)
+                + "\n"
             )
             return decoded
         # 3 is flow control frame - don't decode data
-        elif frame_type == '3':
+        elif frame_type == "3":
             # 0 (continue), 1 (wait), 2 (overflow/abort)
             fc_flag = int(message.data[1:2], 16)
-            fc_flag_code = ''
+            fc_flag_code = ""
             if fc_flag == 0:
-                fc_flag_code = 'continue to send'
+                fc_flag_code = "continue to send"
             elif fc_flag == 1:
-                fc_flag_code = 'wait'
+                fc_flag_code = "wait"
             elif fc_flag == 2:
-                fc_flag_code = 'overflow/abort'
+                fc_flag_code = "overflow/abort"
             else:
-                fc_flag_code = 'unknown error'
+                fc_flag_code = "unknown error"
             # 0: remaining frames sent without flow control or delay,
             # >0: send number of frames before waiting for the next
             # flow control frame
             block_size = int(message.data[2:4], 16)
-            block_size_code = ''
+            block_size_code = ""
             if block_size == 0:
-                block_size_code = 'remaining frames to be sent without flow control or delay'
+                block_size_code = (
+                    "remaining frames to be sent without flow control or delay"
+                )
             else:
-                block_size_code = 'send number of frames before waiting for the next flow control frame'
+                block_size_code = "send number of frames before waiting for the next flow control frame"
             # <=127 (separation time in m),
             # 241-249 (100-900 microseconds)
             separation_time = int(message.data[4:6], 16)
-            separation_time_code = ''
+            separation_time_code = ""
             if separation_time <= 127:
-                separation_time_code = 'milliseconds'
+                separation_time_code = "milliseconds"
             elif 241 <= separation_time <= 249:
                 separation_time = int(hex(separation_time)[3:4], 16) * 100
-                separation_time_code = 'microseconds'
+                separation_time_code = "microseconds"
             else:
-                separation_time_code = 'unknown error'
-            decoded += '      Type: Flow control frame, with the following characteristics:\n'
+                separation_time_code = "unknown error"
             decoded += (
-                    '          FC Flag: ' +
-                    str(fc_flag) + ' - ' +
-                    fc_flag_code + '\n'
+                "      Type: Flow control frame, with the following characteristics:\n"
             )
             decoded += (
-                    '          Block size: ' +
-                    str(block_size) + ' - ' +
-                    block_size_code + '\n'
+                "          FC Flag: " + str(fc_flag) + " - " + fc_flag_code + "\n"
             )
             decoded += (
-                    '          Separation Time: ' +
-                    str(separation_time) + ' - ' +
-                    separation_time_code + '\n'
+                "          Block size: "
+                + str(block_size)
+                + " - "
+                + block_size_code
+                + "\n"
+            )
+            decoded += (
+                "          Separation Time: "
+                + str(separation_time)
+                + " - "
+                + separation_time_code
+                + "\n"
             )
             return decoded
         # Frame put back together by truckdevil
@@ -859,52 +1017,60 @@ class J1939Interface:
             service_id = message.data[2:4].upper()
             uds_data = message.data[4:].upper()
         if int(service_id, 16) == 0x7F:
-            decoded += '      UDS service: Negative Response Code\n'
+            decoded += "      UDS service: Negative Response Code\n"
             decoded += (
-                    '        *request service ID: 0x' +
-                    uds_data[0:2] + ' - ' +
-                    self.uds_services_list[uds_data[0:2]]['service'] + '\n'
+                "        *request service ID: 0x"
+                + uds_data[0:2]
+                + " - "
+                + self.uds_services_list[uds_data[0:2]]["service"]
+                + "\n"
             )
             decoded += (
-                    '        *response code: 0x' +
-                    uds_data[2:4] + ' - ' +
-                    self.uds_nrc_list[uds_data[2:4]]['name'] + '\n'
+                "        *response code: 0x"
+                + uds_data[2:4]
+                + " - "
+                + self.uds_nrc_list[uds_data[2:4]]["name"]
+                + "\n"
             )
             decoded += (
-                    '            description: ' +
-                    self.uds_nrc_list[uds_data[2:4]]['description'] + '\n'
+                "            description: "
+                + self.uds_nrc_list[uds_data[2:4]]["description"]
+                + "\n"
             )
             return decoded
         try:
             service = copy.deepcopy(self.uds_services_list[service_id])
         except KeyError:
-            return decoded + '      UDS Service ID ' + str(service_id) + ' does not exist\n'
+            return (
+                decoded
+                + "      UDS Service ID "
+                + str(service_id)
+                + " does not exist\n"
+            )
 
-        decoded += '      PGNDataLength: ' + str(size + 1) + '\n'
-        decoded += '      UDS service: ' + service['service']
-        if service['type'] == 'request' or service['type'] == 'response':
-            decoded += ' - ' + service['type'] + '\n'
-            data_bytes = service['data_bytes']
-        elif (service['type'] == 'multiRequest' or
-              service['type'] == 'multiResponse'):
-            if service['type'] == 'multiRequest':
-                decoded += ' - ' + 'request' + '\n'
+        decoded += "      PGNDataLength: " + str(size + 1) + "\n"
+        decoded += "      UDS service: " + service["service"]
+        if service["type"] == "request" or service["type"] == "response":
+            decoded += " - " + service["type"] + "\n"
+            data_bytes = service["data_bytes"]
+        elif service["type"] == "multiRequest" or service["type"] == "multiResponse":
+            if service["type"] == "multiRequest":
+                decoded += " - " + "request" + "\n"
             else:
-                decoded += ' - ' + 'response' + '\n'
+                decoded += " - " + "response" + "\n"
             controller_byte = str(int(uds_data[0:2], 16))
-            if controller_byte in service['parameters'].keys():
-                data_bytes = service['parameters'][controller_byte]['data_bytes']
-            elif 'others' in service['parameters'].keys():
-                data_bytes = service['parameters']['others']['data_bytes']
+            if controller_byte in service["parameters"].keys():
+                data_bytes = service["parameters"][controller_byte]["data_bytes"]
+            elif "others" in service["parameters"].keys():
+                data_bytes = service["parameters"]["others"]["data_bytes"]
             else:
                 return decoded
         subfunction = None
-        if service['subfunction_supported']:
+        if service["subfunction_supported"]:
             suppress_pos = int(bin(int(uds_data[0:2], 16))[2:].zfill(8)[0:1], 2)
             subfunction = int(bin(int(uds_data[0:2], 16))[2:].zfill(8)[1:], 2)
             decoded += (
-                    '      suppress positive response? : ' +
-                    str(bool(suppress_pos)) + '\n'
+                "      suppress positive response? : " + str(bool(suppress_pos)) + "\n"
             )
         data_index = 0
         temp_length_of_memory_address = -1
@@ -925,111 +1091,144 @@ class J1939Interface:
                 func_name = func_name.replace("*", "")
 
             # Odd functions that need special care
-            if (func_name == 'dataFormatIdentifier2' and
-                    (temp_mode_of_operation == 'deleteFile'
-                     or temp_mode_of_operation == 'readDir')):
+            if func_name == "dataFormatIdentifier2" and (
+                temp_mode_of_operation == "deleteFile"
+                or temp_mode_of_operation == "readDir"
+            ):
                 continue
-            elif (func_name == 'fileSizeParameterLength' and
-                  (temp_mode_of_operation == 'deleteFile'
-                   or temp_mode_of_operation == 'readFile'
-                   or temp_mode_of_operation == 'readDir')):
+            elif func_name == "fileSizeParameterLength" and (
+                temp_mode_of_operation == "deleteFile"
+                or temp_mode_of_operation == "readFile"
+                or temp_mode_of_operation == "readDir"
+            ):
                 continue
 
-            decoded += '        *' + func_name + '\n'
+            decoded += "        *" + func_name + "\n"
             function = self.uds_functions_list[func_name]
-            decoded += (
-                    '            description: ' +
-                    function['description'] + '\n'
-            )
-            if (function['type'] == 'bit' and
-                    function['numBytes'] != 'variable'):
-                if (subfunction is not None and
-                        data_bytes.index(func_name) == 0):
-                    val = function['parameters'][str(subfunction)]
+            decoded += "            description: " + function["description"] + "\n"
+            if function["type"] == "bit" and function["numBytes"] != "variable":
+                if subfunction is not None and data_bytes.index(func_name) == 0:
+                    val = function["parameters"][str(subfunction)]
                 else:
-                    func_data = (uds_data[data_index * 2:function['numBytes'] * 2
-                                                         + data_index * 2])
+                    func_data = uds_data[
+                        data_index * 2 : function["numBytes"] * 2 + data_index * 2
+                    ]
                     try:
-                        val = function['parameters'][str(int(func_data, 16))]
+                        val = function["parameters"][str(int(func_data, 16))]
                     except KeyError:
-                        val = 'cannot decode value (out of range)'
-                decoded += '            value: ' + val + '\n'
-                if func_name == 'modeOfOperation':
+                        val = "cannot decode value (out of range)"
+                decoded += "            value: " + val + "\n"
+                if func_name == "modeOfOperation":
                     temp_mode_of_operation = val
-                data_index += function['numBytes']
-            elif (function['type'] == 'list' and
-                  function['numBytes'] != 'variable'):
-                func_data = (uds_data[data_index * 2:function['numBytes'] * 2
-                                                     + data_index * 2])
-                bin_data = bin(int(func_data, 16))[2:] \
-                    .zfill(function['numBytes'] * 8)
-                for param in function['parameters']:
+                data_index += function["numBytes"]
+            elif function["type"] == "list" and function["numBytes"] != "variable":
+                func_data = uds_data[
+                    data_index * 2 : function["numBytes"] * 2 + data_index * 2
+                ]
+                bin_data = bin(int(func_data, 16))[2:].zfill(function["numBytes"] * 8)
+                for param in function["parameters"]:
                     decoded += (
-                            '            *' +
-                            function['parameters'][param]['name'] +
-                            '\n'
+                        "            *" + function["parameters"][param]["name"] + "\n"
                     )
                     decoded += (
-                            '              description: ' +
-                            function['parameters'][param]['description'] +
-                            '\n'
+                        "              description: "
+                        + function["parameters"][param]["description"]
+                        + "\n"
                     )
-                    if function['parameters'][param]['units'] == 'list':
-                        for nestedParam in function['parameters'][param]['parameters']:
+                    if function["parameters"][param]["units"] == "list":
+                        for nestedParam in function["parameters"][param]["parameters"]:
                             decoded += (
-                                    '              *' +
-                                    function['parameters'][param]['parameters'][nestedParam]['name'] +
-                                    '\n'
+                                "              *"
+                                + function["parameters"][param]["parameters"][
+                                    nestedParam
+                                ]["name"]
+                                + "\n"
                             )
                             decoded += (
-                                    '                description: ' +
-                                    function['parameters'][param]['parameters'][nestedParam]['description'] +
-                                    '\n'
+                                "                description: "
+                                + function["parameters"][param]["parameters"][
+                                    nestedParam
+                                ]["description"]
+                                + "\n"
                             )
-                            start_position = function['parameters'][param]['startPosition']
+                            start_position = function["parameters"][param][
+                                "startPosition"
+                            ]
                             start_nested_position = (
-                                    start_position +
-                                    function['parameters'][param]['parameters'][nestedParam]['startPosition']
+                                start_position
+                                + function["parameters"][param]["parameters"][
+                                    nestedParam
+                                ]["startPosition"]
                             )
-                            total_len = function['parameters'][param]['parameters'][nestedParam]['totalLen']
-                            inner_func_data = bin_data[start_nested_position: start_nested_position + total_len]
-                            val = (
-                                str(int(inner_func_data, 2)
-                                    * int(function['parameters'][param]['parameters'][nestedParam]['resolution']))
+                            total_len = function["parameters"][param]["parameters"][
+                                nestedParam
+                            ]["totalLen"]
+                            inner_func_data = bin_data[
+                                start_nested_position : start_nested_position
+                                + total_len
+                            ]
+                            val = str(
+                                int(inner_func_data, 2)
+                                * int(
+                                    function["parameters"][param]["parameters"][
+                                        nestedParam
+                                    ]["resolution"]
+                                )
                             )
-                            if function['parameters'][param]['parameters'][nestedParam]['units'] == 'bit':
+                            if (
+                                function["parameters"][param]["parameters"][
+                                    nestedParam
+                                ]["units"]
+                                == "bit"
+                            ):
                                 decoded += (
-                                        '                value: ' +
-                                        function['parameters'][param]['parameters'][nestedParam]['bitDecoding'][val] +
-                                        '\n'
+                                    "                value: "
+                                    + function["parameters"][param]["parameters"][
+                                        nestedParam
+                                    ]["bitDecoding"][val]
+                                    + "\n"
                                 )
                             else:
                                 decoded += (
-                                        '                value: ' +
-                                        val + ' ' +
-                                        function['parameters'][param]['parameters'][nestedParam]['units'] +
-                                        '\n'
+                                    "                value: "
+                                    + val
+                                    + " "
+                                    + function["parameters"][param]["parameters"][
+                                        nestedParam
+                                    ]["units"]
+                                    + "\n"
                                 )
                     else:
-                        start_position = function['parameters'][param]['startPosition']
-                        total_len = function['parameters'][param]['totalLen']
-                        inner_func_data = bin_data[start_position:start_position + total_len]
-                        val = (
-                            str(int(inner_func_data, 2)
-                                * int(function['parameters'][param]['resolution']))
+                        start_position = function["parameters"][param]["startPosition"]
+                        total_len = function["parameters"][param]["totalLen"]
+                        inner_func_data = bin_data[
+                            start_position : start_position + total_len
+                        ]
+                        val = str(
+                            int(inner_func_data, 2)
+                            * int(function["parameters"][param]["resolution"])
                         )
 
-                        if function['parameters'][param]['name'] == 'dataType':
+                        if function["parameters"][param]["name"] == "dataType":
                             temp_scaling_byte_data_type = int(val)
-                        elif function['parameters'][param]['name'] == "LengthOfMemoryAddress":
+                        elif (
+                            function["parameters"][param]["name"]
+                            == "LengthOfMemoryAddress"
+                        ):
                             temp_length_of_memory_address = int(inner_func_data, 2)
-                        elif function['parameters'][param]['name'] == "LengthOfMemorySize":
+                        elif (
+                            function["parameters"][param]["name"]
+                            == "LengthOfMemorySize"
+                        ):
                             temp_length_of_memory_size = int(inner_func_data, 2)
-                        elif function['parameters'][param]['name'] == "numBytes":
+                        elif function["parameters"][param]["name"] == "numBytes":
                             temp_length_scaling_byte = int(val)
-                        elif function['parameters'][param]['name'] == "lengthMaxNumberOfBlockLength":
+                        elif (
+                            function["parameters"][param]["name"]
+                            == "lengthMaxNumberOfBlockLength"
+                        ):
                             temp_length_max_number_of_block_length = int(val)
-                        elif function['parameters'][param]['name'] == "eventType":
+                        elif function["parameters"][param]["name"] == "eventType":
                             event_type = int(val)
                             if event_type == 1 or event_type == 2:
                                 temp_length_event_type_record = 1
@@ -1040,179 +1239,173 @@ class J1939Interface:
                             else:
                                 temp_length_event_type_record = 0
 
-                        if function['parameters'][param]['units'] == 'bit':
+                        if function["parameters"][param]["units"] == "bit":
                             decoded += (
-                                    '              value: ' +
-                                    function['parameters'][param]['bitDecoding'][val] +
-                                    '\n'
+                                "              value: "
+                                + function["parameters"][param]["bitDecoding"][val]
+                                + "\n"
                             )
-                        elif function['parameters'][param]['units'] == 'hexValue':
+                        elif function["parameters"][param]["units"] == "hexValue":
                             decoded += (
-                                    '              value: 0x' +
-                                    hex(int(val))[2:].upper() +
-                                    '\n'
+                                "              value: 0x"
+                                + hex(int(val))[2:].upper()
+                                + "\n"
                             )
                         else:
                             decoded += (
-                                    '              value: ' +
-                                    val + ' ' +
-                                    function['parameters'][param]['units'] +
-                                    '\n'
+                                "              value: "
+                                + val
+                                + " "
+                                + function["parameters"][param]["units"]
+                                + "\n"
                             )
-                data_index += function['numBytes']
-            elif (function['type'] == 'value' and
-                  function['numBytes'] != 'variable'):
-                func_data = (
-                    uds_data[data_index * 2:function['numBytes'] * 2 + data_index * 2]
-                )
-                val = int(func_data, 16) * function['resolution']
+                data_index += function["numBytes"]
+            elif function["type"] == "value" and function["numBytes"] != "variable":
+                func_data = uds_data[
+                    data_index * 2 : function["numBytes"] * 2 + data_index * 2
+                ]
+                val = int(func_data, 16) * function["resolution"]
                 decoded += (
-                        '            value: ' +
-                        str(val) + ' ' +
-                        function['units'] +
-                        '\n'
+                    "            value: " + str(val) + " " + function["units"] + "\n"
                 )
-                if func_name == 'filePathAndNameLength':
+                if func_name == "filePathAndNameLength":
                     temp_length_file_path_and_name = val
-                if func_name == 'fileSizeParameterLength':
+                if func_name == "fileSizeParameterLength":
                     temp_length_file_size_parameter = val
-                data_index += function['numBytes']
-            elif (function['type'] == 'hexValue' and
-                  function['numBytes'] != 'variable'):
-                func_data = (
-                    uds_data[data_index * 2:function['numBytes'] * 2
-                                            + data_index * 2]
-                )
-                if func_name == 'periodicDataIdentifier':
-                    decoded += '            value: 0xF2' + func_data + '\n'
+                data_index += function["numBytes"]
+            elif function["type"] == "hexValue" and function["numBytes"] != "variable":
+                func_data = uds_data[
+                    data_index * 2 : function["numBytes"] * 2 + data_index * 2
+                ]
+                if func_name == "periodicDataIdentifier":
+                    decoded += "            value: 0xF2" + func_data + "\n"
                 else:
-                    decoded += '            value: 0x' + func_data + '\n'
-                data_index += function['numBytes']
-            elif (function['type'] == 'largeBit' and
-                  function['numBytes'] != 'variable'):
-                if func_name == 'routineInfo':
-                    decoded += '            optional value - not used' + '\n'
+                    decoded += "            value: 0x" + func_data + "\n"
+                data_index += function["numBytes"]
+            elif function["type"] == "largeBit" and function["numBytes"] != "variable":
+                if func_name == "routineInfo":
+                    decoded += "            optional value - not used" + "\n"
                     continue
-                func_data = (
-                    uds_data[data_index * 2:function['numBytes'] * 2
-                                            + data_index * 2]
-                )
+                func_data = uds_data[
+                    data_index * 2 : function["numBytes"] * 2 + data_index * 2
+                ]
                 val = str(int(func_data, 16))
-                for param in function['parameters']:
-                    range_nums = param.split('-')
+                for param in function["parameters"]:
+                    range_nums = param.split("-")
                     if len(range_nums) == 1:
                         if val == range_nums[0]:
                             # Found it
-                            param_name = function['parameters'][param]
+                            param_name = function["parameters"][param]
                     else:
                         if range_nums[0] <= val <= range_nums[1]:
-                            param_name = function['parameters'][param]
-                decoded += (
-                        '            value: ' + val +
-                        ' - ' + param_name + '\n'
-                )
-                if func_name == 'routineIdentifier':
+                            param_name = function["parameters"][param]
+                decoded += "            value: " + val + " - " + param_name + "\n"
+                if func_name == "routineIdentifier":
                     temp_routine_identifier = param_name
-                data_index += function['numBytes']
-            elif (function['type'] == 'optional' and
-                  function['numBytes'] == 'variable'):
-                if (func_name == 'scalingByteExtension' and
-                        temp_scaling_byte_data_type in function['dependentOnValues']):
-                    func_data = (
-                        uds_data[data_index * 2:temp_length_scaling_byte * 2
-                                                + data_index * 2]
-                    )
-                    decoded += '            value: 0x' + func_data + '\n'
+                data_index += function["numBytes"]
+            elif function["type"] == "optional" and function["numBytes"] == "variable":
+                if (
+                    func_name == "scalingByteExtension"
+                    and temp_scaling_byte_data_type in function["dependentOnValues"]
+                ):
+                    func_data = uds_data[
+                        data_index * 2 : temp_length_scaling_byte * 2 + data_index * 2
+                    ]
+                    decoded += "            value: 0x" + func_data + "\n"
                     data_index += temp_length_scaling_byte
                 else:
-                    decoded += '            optional value - not used' + '\n'
+                    decoded += "            optional value - not used" + "\n"
                     continue
-            elif (function['type'] == 'NA' and
-                  function['numBytes'] == 'variable'):
-                if func_name == 'memoryAddress':
-                    func_data = (
-                        uds_data[data_index * 2:temp_length_of_memory_address * 2 + data_index * 2]
-                    )
-                    decoded += '            value: 0x' + func_data + '\n'
+            elif function["type"] == "NA" and function["numBytes"] == "variable":
+                if func_name == "memoryAddress":
+                    func_data = uds_data[
+                        data_index * 2 : temp_length_of_memory_address * 2
+                        + data_index * 2
+                    ]
+                    decoded += "            value: 0x" + func_data + "\n"
                     data_index += temp_length_of_memory_address
-                elif (func_name == 'memorySize' and
-                      service['service'] == 'DynamicallyDefineDataIdentifier' and
-                      subfunction == 1):
-                    func_data = uds_data[data_index * 2:1 * 2 + data_index * 2]
+                elif (
+                    func_name == "memorySize"
+                    and service["service"] == "DynamicallyDefineDataIdentifier"
+                    and subfunction == 1
+                ):
+                    func_data = uds_data[data_index * 2 : 1 * 2 + data_index * 2]
                     decoded += (
-                            '            value: ' +
-                            str(int(func_data, 16)) +
-                            ' bytes\n'
+                        "            value: " + str(int(func_data, 16)) + " bytes\n"
                     )
                     data_index += 1
-                elif func_name == 'memorySize':
-                    func_data = (
-                        uds_data[data_index * 2:temp_length_of_memory_size * 2 + data_index * 2]
-                    )
+                elif func_name == "memorySize":
+                    func_data = uds_data[
+                        data_index * 2 : temp_length_of_memory_size * 2 + data_index * 2
+                    ]
                     decoded += (
-                            '            value: ' +
-                            str(int(func_data, 16)) +
-                            ' bytes\n'
+                        "            value: " + str(int(func_data, 16)) + " bytes\n"
                     )
                     data_index += temp_length_of_memory_size
-                elif (func_name == 'securitySeed' or
-                      func_name == 'securityAccessDataOrKey' or
-                      func_name == 'routineStatusRecord' or
-                      func_name == 'routineControlOptionRecord' or
-                      (func_name == 'maxNumberOfBlockLength'
-                       and service['service'] != 'RequestFileTransfer') or
-                      func_name == 'transferRequestParameterRecord' or
-                      func_name == 'transferResponseParameterRecord' or
-                      (func_name == 'dataRecord'
-                       and service['service'] == 'WriteMemoryByAddress') or
-                      func_name == 'serviceToRespondToRecord'):
-                    func_data = uds_data[data_index * 2:]
-                    decoded += '            value: 0x' + func_data + '\n'
-                    data_index = len(uds_data) / 2 + 1
-                elif func_name == 'filePathAndName':
-                    func_data = (
-                        uds_data[data_index * 2:temp_length_file_path_and_name * 2
-                                                + data_index * 2]
+                elif (
+                    func_name == "securitySeed"
+                    or func_name == "securityAccessDataOrKey"
+                    or func_name == "routineStatusRecord"
+                    or func_name == "routineControlOptionRecord"
+                    or (
+                        func_name == "maxNumberOfBlockLength"
+                        and service["service"] != "RequestFileTransfer"
                     )
+                    or func_name == "transferRequestParameterRecord"
+                    or func_name == "transferResponseParameterRecord"
+                    or (
+                        func_name == "dataRecord"
+                        and service["service"] == "WriteMemoryByAddress"
+                    )
+                    or func_name == "serviceToRespondToRecord"
+                ):
+                    func_data = uds_data[data_index * 2 :]
+                    decoded += "            value: 0x" + func_data + "\n"
+                    data_index = len(uds_data) / 2 + 1
+                elif func_name == "filePathAndName":
+                    func_data = uds_data[
+                        data_index * 2 : temp_length_file_path_and_name * 2
+                        + data_index * 2
+                    ]
                     bytes_object = bytes.fromhex(func_data)
                     decoded += (
-                            '            value: ' +
-                            bytes_object.decode("ASCII") +
-                            '\n'
+                        "            value: " + bytes_object.decode("ASCII") + "\n"
                     )
                     data_index += temp_length_file_path_and_name
-                elif (func_name == 'fileSizeUncompressed' or
-                      func_name == 'fileSizeCompressed'):
-                    func_data = (
-                        uds_data[data_index * 2:temp_length_file_size_parameter * 2
-                                                + data_index * 2]
-                    )
+                elif (
+                    func_name == "fileSizeUncompressed"
+                    or func_name == "fileSizeCompressed"
+                ):
+                    func_data = uds_data[
+                        data_index * 2 : temp_length_file_size_parameter * 2
+                        + data_index * 2
+                    ]
                     decoded += (
-                            '            value: ' +
-                            str(int(int(func_data, 16) / 1000)) +
-                            ' Kbyte\n'
+                        "            value: "
+                        + str(int(int(func_data, 16) / 1000))
+                        + " Kbyte\n"
                     )
                     data_index += temp_length_file_size_parameter
-                elif func_name == 'maxNumberOfBlockLength':
-                    func_data = (
-                        uds_data[data_index * 2:temp_length_max_number_of_block_length * 2
-                                                + data_index * 2]
-                    )
+                elif func_name == "maxNumberOfBlockLength":
+                    func_data = uds_data[
+                        data_index * 2 : temp_length_max_number_of_block_length * 2
+                        + data_index * 2
+                    ]
                     decoded += (
-                            '            value: ' +
-                            str(int(int(func_data, 16))) +
-                            ' bytes\n'
+                        "            value: "
+                        + str(int(int(func_data, 16)))
+                        + " bytes\n"
                     )
                     data_index += temp_length_max_number_of_block_length
-                elif func_name == 'eventTypeRecord':
-                    func_data = (
-                        uds_data[data_index * 2:temp_length_event_type_record * 2
-                                                + data_index * 2]
-                    )
-                    decoded += '            value: 0x' + func_data + '\n'
+                elif func_name == "eventTypeRecord":
+                    func_data = uds_data[
+                        data_index * 2 : temp_length_event_type_record * 2
+                        + data_index * 2
+                    ]
+                    decoded += "            value: 0x" + func_data + "\n"
                     data_index += temp_length_event_type_record
                 else:
-                    decoded += '            length is variable' + '\n'
+                    decoded += "            length is variable" + "\n"
                     data_index = len(uds_data) / 2 + 1
         return decoded
 
@@ -1265,23 +1458,32 @@ class MessageManagement:
         with self._lock_conversations:
             for i in range(0, len(self._conversations)):
                 # Correct conversation found
-                if self._conversations[i].src_addr == message.src_addr \
-                        and self._conversations[i].dst_addr == message.pdu_specific:
+                if (
+                    self._conversations[i].src_addr == message.src_addr
+                    and self._conversations[i].dst_addr == message.pdu_specific
+                ):
                     self._conversations[i].received_packets += 1
                     # Received all the packets
                     if self._conversations[i].complete:
-                        bytes_left = (self._conversations[i].num_bytes - self._conversations[i].received_bytes)
+                        bytes_left = (
+                            self._conversations[i].num_bytes
+                            - self._conversations[i].received_bytes
+                        )
                         self._conversations[i].received_bytes += bytes_left
                         data_index = (bytes_left * 2) + 2
                         # Copy final bytes
-                        self._conversations[i].completeMessage.data += message.data[2:data_index]
+                        self._conversations[i].completeMessage.data += message.data[
+                            2:data_index
+                        ]
                         # Ready to send next time a message is read
                         self._conversations[i].readyToSend = True
                         # More packets needed, add 7 bytes of data to stored message
                     else:
                         self._conversations[i].received_bytes += 7
                         # Skip first byte, this is counter
-                        self._conversations[i].completeMessage.data += message.data[2:16]
+                        self._conversations[i].completeMessage.data += message.data[
+                            2:16
+                        ]
                     break
 
     def add_new_isotp_conversation(self, message):
@@ -1292,8 +1494,12 @@ class MessageManagement:
         with self._lock_uds_conversations:
             for i in range(0, len(self._uds_conversations)):
                 # Correct UDS message
-                if self._uds_conversations[i].completeMessage.src_addr == message.src_addr and \
-                        self._uds_conversations[i].completeMessage.dst_addr == message.dst_addr:
+                if (
+                    self._uds_conversations[i].completeMessage.src_addr
+                    == message.src_addr
+                    and self._uds_conversations[i].completeMessage.dst_addr
+                    == message.dst_addr
+                ):
                     # The index of this received message
                     index_byte = int(message.data[1:2], 16)
                     # Correct order of data received
@@ -1301,15 +1507,17 @@ class MessageManagement:
                         # Received all data bytes (including the current packet)
                         if self._uds_conversations[i].complete(curr_received=7):
                             bytes_left = (
-                                    self._uds_conversations[i].num_bytes -
-                                    self._uds_conversations[i].received_bytes
+                                self._uds_conversations[i].num_bytes
+                                - self._uds_conversations[i].received_bytes
                             )
                             self._uds_conversations[i].received_bytes += bytes_left
                             data_index = int((bytes_left * 2) + 2)
                             # Copy final bytes
-                            self._uds_conversations[i].completeMessage.data += message.data[2:data_index]
+                            self._uds_conversations[
+                                i
+                            ].completeMessage.data += message.data[2:data_index]
                             self._uds_conversations[i].completeMessage.total_bytes = (
-                                    len(self._uds_conversations[i].completeMessage.data) / 2
+                                len(self._uds_conversations[i].completeMessage.data) / 2
                             )
                             # Ready to send next time a message is read
                             self._uds_conversations[i].readyToSend = True
@@ -1317,7 +1525,9 @@ class MessageManagement:
                         # to stored message
                         else:
                             self._uds_conversations[i].received_bytes += 7
-                            self._uds_conversations[i].completeMessage.data += message.data[2:16]
+                            self._uds_conversations[
+                                i
+                            ].completeMessage.data += message.data[2:16]
                             # If indexByte is 15, we start back over
                             # at 0 for next sequence number
                             if index_byte == 15:
@@ -1338,10 +1548,11 @@ class J1939Message:
             if len(data) > 0:
                 int(data, 16)
         except ValueError:
-            raise ValueError('Data must be in hexadecimal format')
-        if (len(data) % 2 != 0 or
-                len(data) > 3570):
-            raise ValueError('Length of data must be an even number and shorter than 1785 bytes')
+            raise ValueError("Data must be in hexadecimal format")
+        if len(data) % 2 != 0 or len(data) > 3570:
+            raise ValueError(
+                "Length of data must be an even number and shorter than 1785 bytes"
+            )
         if total_bytes is None:
             total_bytes = len(data) / 2
         self._can_id = can_id
@@ -1377,8 +1588,14 @@ class J1939Message:
     def priority(self, value):
         if value < 0 or value > 7:
             raise ValueError("priority is between 0-7")
-        self._can_id = j1939_fields_to_can_id(value, self.reserved_bit, self.data_page_bit, self.pdu_format,
-                                              self.pdu_specific, self.src_addr)
+        self._can_id = j1939_fields_to_can_id(
+            value,
+            self.reserved_bit,
+            self.data_page_bit,
+            self.pdu_format,
+            self.pdu_specific,
+            self.src_addr,
+        )
 
     @property
     def reserved_bit(self):
@@ -1388,8 +1605,14 @@ class J1939Message:
     def reserved_bit(self, value):
         if value < 0 or value > 1:
             raise ValueError("reserved bit is either 0 or 1")
-        self._can_id = j1939_fields_to_can_id(self.priority, value, self.data_page_bit, self.pdu_format,
-                                              self.pdu_specific, self.src_addr)
+        self._can_id = j1939_fields_to_can_id(
+            self.priority,
+            value,
+            self.data_page_bit,
+            self.pdu_format,
+            self.pdu_specific,
+            self.src_addr,
+        )
 
     @property
     def data_page_bit(self):
@@ -1399,8 +1622,14 @@ class J1939Message:
     def data_page_bit(self, value):
         if value < 0 or value > 1:
             raise ValueError("data page bit is either 0 or 1")
-        self._can_id = j1939_fields_to_can_id(self.priority, self.reserved_bit, value, self.pdu_format,
-                                              self.pdu_specific, self.src_addr)
+        self._can_id = j1939_fields_to_can_id(
+            self.priority,
+            self.reserved_bit,
+            value,
+            self.pdu_format,
+            self.pdu_specific,
+            self.src_addr,
+        )
 
     @property
     def pdu_format(self):
@@ -1410,8 +1639,14 @@ class J1939Message:
     def pdu_format(self, value):
         if value < 0 or value > 0xFF:
             raise ValueError("pdu format is between 0-255")
-        self._can_id = j1939_fields_to_can_id(self.priority, self.reserved_bit, self.data_page_bit, value,
-                                              self.pdu_specific, self.src_addr)
+        self._can_id = j1939_fields_to_can_id(
+            self.priority,
+            self.reserved_bit,
+            self.data_page_bit,
+            value,
+            self.pdu_specific,
+            self.src_addr,
+        )
 
     @property
     def pdu_specific(self):
@@ -1421,8 +1656,14 @@ class J1939Message:
     def pdu_specific(self, value):
         if value < 0 or value > 0xFF:
             raise ValueError("pdu specific is between 0-255")
-        self._can_id = j1939_fields_to_can_id(self.priority, self.reserved_bit, self.data_page_bit, self.pdu_format,
-                                              value, self.src_addr)
+        self._can_id = j1939_fields_to_can_id(
+            self.priority,
+            self.reserved_bit,
+            self.data_page_bit,
+            self.pdu_format,
+            value,
+            self.src_addr,
+        )
 
     @property
     def src_addr(self):
@@ -1432,8 +1673,14 @@ class J1939Message:
     def src_addr(self, value):
         if value < 0 or value > 0xFF:
             raise ValueError("source address is between 0-255")
-        self._can_id = j1939_fields_to_can_id(self.priority, self.reserved_bit, self.data_page_bit, self.pdu_format,
-                                              self.pdu_specific, value)
+        self._can_id = j1939_fields_to_can_id(
+            self.priority,
+            self.reserved_bit,
+            self.data_page_bit,
+            self.pdu_format,
+            self.pdu_specific,
+            value,
+        )
 
     @property
     def pgn(self):
@@ -1458,10 +1705,11 @@ class J1939Message:
             if len(value) > 0:
                 int(value, 16)
         except ValueError:
-            raise ValueError('Data must be in hexadecimal format')
-        if (len(value) % 2 != 0 or
-                len(value) > 3570):
-            raise ValueError('Length of data must be an even number and shorter than 1785 bytes')
+            raise ValueError("Data must be in hexadecimal format")
+        if len(value) % 2 != 0 or len(value) > 3570:
+            raise ValueError(
+                "Length of data must be an even number and shorter than 1785 bytes"
+            )
         self._data = value.upper()
 
     @property
@@ -1481,14 +1729,16 @@ class J1939Message:
                                                                                 self.total_bytes, self.data.upper())
 
         """
-        return "({:6f}) {:08X}    {:02X} {:04X} {:02X} --> {:02X} [{:04d}] {:<}".format(self.timestamp, 
-                                                                                     self.can_id, 
-                                                                                     self.priority, 
-                                                                                     self.pgn,
-                                                                                     self.src_addr, 
-                                                                                     self.dst_addr,
-                                                                                     self.total_bytes, 
-                                                                                     self.data.upper())
+        return "({:6f}) {:08X}    {:02X} {:04X} {:02X} --> {:02X} [{:04d}] {:<}".format(
+            self.timestamp,
+            self.can_id,
+            self.priority,
+            self.pgn,
+            self.src_addr,
+            self.dst_addr,
+            self.total_bytes,
+            self.data.upper(),
+        )
 
         # return hex(self.can_id) + "  %02X %04X %02X --> %02X [%d]  %s" % (self.priority, self.pgn,
         #                                                                  self.src_addr, self.dst_addr,
@@ -1504,7 +1754,7 @@ class _J1939MultiPacketMessage:
 
     def __init__(self, first_message=None):
         if isinstance(first_message, J1939Message) is False or first_message is None:
-            raise Exception('Must include an instance of a J1939_Message')
+            raise Exception("Must include an instance of a J1939_Message")
 
         self.num_bytes = int(first_message.data[4:6] + first_message.data[2:4], 16)
         self.num_packets = int(first_message.data[6:8], 16)
@@ -1519,11 +1769,19 @@ class _J1939MultiPacketMessage:
 
         total_bytes = self.num_bytes
         data = ""
-        can_id = j1939_fields_to_can_id(first_message.priority, first_message.reserved_bit, first_message.data_page_bit,
-                                        pdu_format, pdu_specific, first_message.src_addr)
+        can_id = j1939_fields_to_can_id(
+            first_message.priority,
+            first_message.reserved_bit,
+            first_message.data_page_bit,
+            pdu_format,
+            pdu_specific,
+            first_message.src_addr,
+        )
 
         # Create new message with TP abstracted
-        self.completeMessage = J1939Message(can_id=can_id, data=data, total_bytes=total_bytes)
+        self.completeMessage = J1939Message(
+            can_id=can_id, data=data, total_bytes=total_bytes
+        )
         # Multipacket message not completed
         self.readyToSend = False
 
@@ -1545,9 +1803,8 @@ class _J1939ISOTPMessage:
     """
 
     def __init__(self, first_message=None):
-        if (isinstance(first_message, J1939Message) == False or
-                first_message is None):
-            raise Exception('Must include an instance of a J1939Message')
+        if isinstance(first_message, J1939Message) == False or first_message is None:
+            raise Exception("Must include an instance of a J1939Message")
 
         # Between 8 and 4095 bytes
         self.num_bytes = int(first_message.data[1:4], 16)
@@ -1569,10 +1826,7 @@ class _J1939ISOTPMessage:
         self.nextExpectedIndex = 1
 
         # Create new message
-        self.completeMessage = J1939Message(
-            can_id=first_message.can_id,
-            data=data
-        )
+        self.completeMessage = J1939Message(can_id=first_message.can_id, data=data)
 
         # ISO TP message not ready to send
         self.readyToSend = False

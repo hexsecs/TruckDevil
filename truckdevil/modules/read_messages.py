@@ -1,66 +1,85 @@
 import dill
 
-from j1939.j1939 import J1939Interface
-from libs.command import Command
-from libs.settings import SettingsManager, Setting
-from libs.pretty_shim import DEFAULT_PRETTY_ARGS, MAGIC_TRUCKDEVIL, MAGIC_DEFAULT
+from truckdevil.j1939.j1939 import J1939Interface
+from truckdevil.libs.command import Command
+from truckdevil.libs.settings import SettingsManager, Setting
+from truckdevil.libs.pretty_shim import (
+    DEFAULT_PRETTY_ARGS,
+    MAGIC_TRUCKDEVIL,
+    MAGIC_DEFAULT,
+)
 
 
 class Reader:
     def __init__(self):
         self.sm = SettingsManager()
         sl = [
-            Setting("read_time", 0).add_constraint("minimum", lambda x: 0 <= x)
-                .add_description("The amount of time to read messages for, in seconds. Ignored if not set."),
-
-            Setting("num_messages", 0).add_constraint("minimum", lambda x: 0 <= x)
-                .add_description("The number of messages to read before stopping. Ignored if not set."),
-
-            Setting("abstract_TPM", False).add_constraint("boolean", lambda x: type(x) is bool)
-                .add_description("Whether or not to abstract Transport Protocol messages."),
-
-            Setting("log_to_file", False).add_constraint("boolean", lambda x: type(x) is bool)
-                .add_description("Whether or not to log the messages to a file."),
-
-            Setting("log_name", "log_[time].txt")
-                .add_description("The name of the log file, if used."),
-
-            Setting("verbose", False).add_constraint("boolean", lambda x: type(x) is bool)
-                .add_description("Display the messages in decoded form, if applicable."),
-
-            Setting("candump", False).add_constraint("boolean", lambda x: type(x) is bool)
-                .add_description("Display the messages in candump format"),
-
-            Setting("pretty", False).add_constraint("boolean", lambda x: type(x) is bool)
-                .add_description("Display the messages in pretty form using pretty_j1939"),
-
-            Setting("pretty_j1939_args", DEFAULT_PRETTY_ARGS)
-                .add_description("Arguments to pass to the pretty_j1939 renderer and describer"),
-
-            Setting("pretty_da_json", MAGIC_TRUCKDEVIL)
-                .add_description(f"Source for J1939 definitions. \"{MAGIC_TRUCKDEVIL}\" for in-memory conversion, \"{MAGIC_DEFAULT}\" for pretty_j1939 defaults, or a filename."),
-
-            Setting("filter_can_id", [0]).add_constraint("list_of_ints", lambda x: all(isinstance(i, int) for i in x))
-                .add_description("Only read messages containing one of these CAN IDs."),
-
-            Setting("filter_priority", [0]).add_constraint("list_of_ints", lambda x: all(isinstance(i, int) for i in x))
-                .add_description("Only read messages containing one of these priorities."),
-
-            Setting("filter_pdu_format", [0]).add_constraint("list_of_ints",
-                                                             lambda x: all(isinstance(i, int) for i in x))
-                .add_description("Only read messages containing one of these PDU Formats."),
-
-            Setting("filter_pdu_specific", [0]).add_constraint("list_of_ints",
-                                                               lambda x: all(isinstance(i, int) for i in x))
-                .add_description("Only read messages containing one of these PDU Specifics."),
-
-            Setting("filter_src_addr", [0]).add_constraint("list_of_ints", lambda x: all(isinstance(i, int) for i in x))
-                .add_description("Only read messages containing one of these source addresses."),
-
-            Setting("filter_data_snippet", [""])
-                .add_description(
-                "Only read messages containing one of these data snippets. Checks if snippets in data."),
-
+            Setting("read_time", 0)
+            .add_constraint("minimum", lambda x: 0 <= x)
+            .add_description(
+                "The amount of time to read messages for, in seconds. Ignored if not set."
+            ),
+            Setting("num_messages", 0)
+            .add_constraint("minimum", lambda x: 0 <= x)
+            .add_description(
+                "The number of messages to read before stopping. Ignored if not set."
+            ),
+            Setting("abstract_TPM", False)
+            .add_constraint("boolean", lambda x: type(x) is bool)
+            .add_description("Whether or not to abstract Transport Protocol messages."),
+            Setting("log_to_file", False)
+            .add_constraint("boolean", lambda x: type(x) is bool)
+            .add_description("Whether or not to log the messages to a file."),
+            Setting("log_name", "log_[time].txt").add_description(
+                "The name of the log file, if used."
+            ),
+            Setting("verbose", False)
+            .add_constraint("boolean", lambda x: type(x) is bool)
+            .add_description("Display the messages in decoded form, if applicable."),
+            Setting("candump", False)
+            .add_constraint("boolean", lambda x: type(x) is bool)
+            .add_description("Display the messages in candump format"),
+            Setting("pretty", False)
+            .add_constraint("boolean", lambda x: type(x) is bool)
+            .add_description("Display the messages in pretty form using pretty_j1939"),
+            Setting("pretty_j1939_args", DEFAULT_PRETTY_ARGS).add_description(
+                "Arguments to pass to the pretty_j1939 renderer and describer"
+            ),
+            Setting("pretty_da_json", MAGIC_TRUCKDEVIL).add_description(
+                f'Source for J1939 definitions. "{MAGIC_TRUCKDEVIL}" for in-memory conversion, "{MAGIC_DEFAULT}" for pretty_j1939 defaults, or a filename.'
+            ),
+            Setting("filter_can_id", [0])
+            .add_constraint(
+                "list_of_ints", lambda x: all(isinstance(i, int) for i in x)
+            )
+            .add_description("Only read messages containing one of these CAN IDs."),
+            Setting("filter_priority", [0])
+            .add_constraint(
+                "list_of_ints", lambda x: all(isinstance(i, int) for i in x)
+            )
+            .add_description("Only read messages containing one of these priorities."),
+            Setting("filter_pdu_format", [0])
+            .add_constraint(
+                "list_of_ints", lambda x: all(isinstance(i, int) for i in x)
+            )
+            .add_description("Only read messages containing one of these PDU Formats."),
+            Setting("filter_pdu_specific", [0])
+            .add_constraint(
+                "list_of_ints", lambda x: all(isinstance(i, int) for i in x)
+            )
+            .add_description(
+                "Only read messages containing one of these PDU Specifics."
+            ),
+            Setting("filter_src_addr", [0])
+            .add_constraint(
+                "list_of_ints", lambda x: all(isinstance(i, int) for i in x)
+            )
+            .add_description(
+                "Only read messages containing one of these source addresses."
+            ),
+            Setting("filter_data_snippet", [""]).add_description(
+                "Only read messages containing one of these data snippets. Checks if snippets in data."
+            ),
         ]
 
         for setting in sl:
@@ -125,6 +144,7 @@ class ReadCommands(Command):
         set filter_src_addr 11,249
         """
         import shlex
+
         argv = shlex.split(arg)
         name = argv[0]
         if len(argv) == 1:
@@ -201,12 +221,25 @@ class ReadCommands(Command):
         file_name = None
         if self.reader.sm["log_name"].updated:
             file_name = self.reader.sm.log_name
-        if self.reader.sm["pretty_j1939_args"].updated or self.reader.sm["pretty_da_json"].updated:
-            self.devil.update_pretty_settings(self.reader.sm.pretty_j1939_args, self.reader.sm.pretty_da_json)
+        if (
+            self.reader.sm["pretty_j1939_args"].updated
+            or self.reader.sm["pretty_da_json"].updated
+        ):
+            self.devil.update_pretty_settings(
+                self.reader.sm.pretty_j1939_args, self.reader.sm.pretty_da_json
+            )
         try:
-            self.devil.print_messages(self.reader.sm.abstract_TPM, read_time, num_messages,
-                                      self.reader.sm.verbose, self.reader.sm.log_to_file, file_name, 
-                                      self.reader.sm.candump, self.reader.sm.pretty, **filters)
+            self.devil.print_messages(
+                self.reader.sm.abstract_TPM,
+                read_time,
+                num_messages,
+                self.reader.sm.verbose,
+                self.reader.sm.log_to_file,
+                file_name,
+                self.reader.sm.candump,
+                self.reader.sm.pretty,
+                **filters,
+            )
         except KeyboardInterrupt:
             if self.reader.sm.pretty:
                 self.devil.pretty_shim.print_summary()
@@ -224,9 +257,10 @@ class ReadCommands(Command):
 
     def complete_save(self, text, line, begidx, endidx):
         import glob as g
+
         if not text:
-            return g.glob('*')
-        return g.glob(text + '*')
+            return g.glob("*")
+        return g.glob(text + "*")
 
     def complete_load(self, text, line, begidx, endidx):
         return self.complete_save(text, line, begidx, endidx)

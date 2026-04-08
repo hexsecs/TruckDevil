@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "truckdevil"
+version = "1.1.0"
+description = "J1939 testing framework"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "GPL-3.0-or-later"
+authors = [
+  {name = "Hannah Silva"},
+]
+dependencies = [
+  "pyserial>=3.5",
+  "python-can>=4.0",
+  "dill>=0.3.4",
+  "pyreadline3>=3.4.1; sys_platform == 'win32'",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Science/Research",
+  "Natural Language :: English",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Security",
+]
+
+[project.optional-dependencies]
+pretty = [
+  "pretty_j1939>=0.0.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/LittleBlondeDevil/TruckDevil"
+Download = "https://pypi.org/project/truckdevil"
+
+[project.scripts]
+truckdevil = "truckdevil:main"
+
+[dependency-groups]
+dev = [
+  "build",
+  "flake8",
+  "pytest>=7.0",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.setuptools.packages.find]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+truckdevil = ["resources/json_files/*.json"]

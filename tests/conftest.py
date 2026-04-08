@@ -2,6 +2,7 @@
 Pytest fixtures for TruckDevil test suite.
 Uses python-can virtual interface so no hardware is required.
 """
+
 import os
 import sys
 import uuid
@@ -85,14 +86,10 @@ def j1939_interface(virtual_device, j1939_cwd):
 @pytest.fixture
 def truckdevil_module_env(j1939_cwd):
     """
-    CWD is truckdevil dir and truckdevil is at front of sys.path so that
-    'import modules.read_messages' and 'from libs.device import Device' work
-    (as when running python truckdevil.py from inside truckdevil/).
+    CWD is truckdevil dir for resource lookup.
+
+    Most tests now import through the installed package namespace. The repo root
+    is already on sys.path, so this fixture mainly preserves CWD-sensitive
+    behavior and a consistent hook point for CLI-oriented tests.
     """
-    old_path = list(sys.path)
-    try:
-        if _TRUCKDEVIL_DIR not in sys.path:
-            sys.path.insert(0, _TRUCKDEVIL_DIR)
-        yield
-    finally:
-        sys.path[:] = old_path
+    yield

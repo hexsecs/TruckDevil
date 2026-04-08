@@ -1,4 +1,5 @@
 """Tests for read_messages module with virtual device."""
+
 import sys
 import threading
 import time
@@ -15,7 +16,8 @@ def shared_channel():
 
 def _inject_messages(channel, count, delay=0.05):
     """Inject count CAN messages on channel (run in thread)."""
-    from libs.device import Device
+    from truckdevil.libs.device import Device
+
     dev = Device("virtual", None, channel, 250000)
     try:
         for i in range(count):
@@ -34,10 +36,12 @@ def _inject_messages(channel, count, delay=0.05):
                 pass
 
 
-def test_read_messages_set_num_messages_print_messages(truckdevil_module_env, shared_channel):
+def test_read_messages_set_num_messages_print_messages(
+    truckdevil_module_env, shared_channel
+):
     """main_mod set num_messages 3 print_messages with 3 messages injected; no crash, output reflects messages."""
-    from libs.device import Device
-    import modules.read_messages as read_messages
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.read_messages as read_messages
 
     device = Device("virtual", None, shared_channel, 250000)
     try:
@@ -47,11 +51,14 @@ def test_read_messages_set_num_messages_print_messages(truckdevil_module_env, sh
         time.sleep(0.05)
         # Run module: set num_messages 3 then print_messages (capture stdout)
         import io
+
         old_stdout = sys.stdout
         buf = io.StringIO()
         try:
             sys.stdout = buf
-            read_messages.main_mod(["set", "num_messages", "3", "print_messages", "back"], device)
+            read_messages.main_mod(
+                ["set", "num_messages", "3", "print_messages", "back"], device
+            )
         finally:
             sys.stdout = old_stdout
         t.join(timeout=2)
@@ -67,17 +74,30 @@ def test_read_messages_set_num_messages_print_messages(truckdevil_module_env, sh
 
 def test_read_messages_set_unset_settings(truckdevil_module_env, shared_channel):
     """set / unset / settings: drive via main_mod and assert no crash."""
-    from libs.device import Device
-    import modules.read_messages as read_messages
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.read_messages as read_messages
 
     device = Device("virtual", None, shared_channel, 250000)
     try:
         import io
+
         buf = io.StringIO()
         old = sys.stdout
         try:
             sys.stdout = buf
-            read_messages.main_mod(["set", "num_messages", "5", "settings", "unset", "num_messages", "settings", "back"], device)
+            read_messages.main_mod(
+                [
+                    "set",
+                    "num_messages",
+                    "5",
+                    "settings",
+                    "unset",
+                    "num_messages",
+                    "settings",
+                    "back",
+                ],
+                device,
+            )
         finally:
             sys.stdout = old
         out = buf.getvalue()
@@ -90,15 +110,19 @@ def test_read_messages_set_unset_settings(truckdevil_module_env, shared_channel)
                 pass
 
 
-def test_read_messages_save_load_roundtrip(truckdevil_module_env, shared_channel, tmp_path):
+def test_read_messages_save_load_roundtrip(
+    truckdevil_module_env, shared_channel, tmp_path
+):
     """save settings to temp file, load; assert no crash."""
-    from libs.device import Device
-    import modules.read_messages as read_messages
+    from truckdevil.libs.device import Device
+    import truckdevil.modules.read_messages as read_messages
 
     device = Device("virtual", None, shared_channel, 250000)
     f = tmp_path / "read_settings.dill"
     try:
-        read_messages.main_mod(["set", "num_messages", "2", "save", str(f), "back"], device)
+        read_messages.main_mod(
+            ["set", "num_messages", "2", "save", str(f), "back"], device
+        )
         read_messages.main_mod(["load", str(f), "settings", "back"], device)
     finally:
         if device.can_bus is not None:

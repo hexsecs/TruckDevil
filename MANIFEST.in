@@ -1,0 +1,2 @@
+include README.md
+recursive-include truckdevil/resources/json_files *.json

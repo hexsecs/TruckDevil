@@ -1,4 +1,5 @@
 """Tests for framework CLI (truckdevil.py) with virtual device."""
+
 import importlib.util
 import os
 import re
@@ -22,7 +23,7 @@ def _load_framework_commands():
     mod = importlib.util.module_from_spec(spec)
     old_path = list(sys.path)
     try:
-        sys.path.insert(0, _TRUCKDEVIL_DIR)
+        sys.path.insert(0, _REPO_ROOT)
         spec.loader.exec_module(mod)
         return mod.FrameworkCommands
     finally:
@@ -48,7 +49,9 @@ def _load_version():
 def test_version_format():
     """__version__ exists and follows semver (MAJOR.MINOR.PATCH)."""
     version = _load_version()
-    assert re.match(r"^\d+\.\d+\.\d+$", version), f"unexpected version format: {version}"
+    assert re.match(r"^\d+\.\d+\.\d+$", version), (
+        f"unexpected version format: {version}"
+    )
 
 
 def test_version_in_intro_banner(truckdevil_module_env):
@@ -62,9 +65,12 @@ def test_version_in_intro_banner(truckdevil_module_env):
 def test_version_flag(truckdevil_module_env):
     """python truckdevil.py --version prints 'truckdevil <version>' and exits."""
     import subprocess
+
     result = subprocess.run(
         [sys.executable, os.path.join(_TRUCKDEVIL_DIR, "truckdevil.py"), "--version"],
-        capture_output=True, text=True, timeout=10,
+        capture_output=True,
+        text=True,
+        timeout=10,
     )
     assert result.returncode == 0
     assert _load_version() in result.stdout
@@ -290,7 +296,7 @@ def test_readline_tab_binding_configured(truckdevil_module_env):
     readline = pytest.importorskip("readline")
     # After importing readline, verify we can parse_and_bind without error
     # (the actual binding happens in __main__ and Command.preloop)
-    if getattr(readline, '__doc__', None) and 'libedit' in readline.__doc__:
+    if getattr(readline, "__doc__", None) and "libedit" in readline.__doc__:
         readline.parse_and_bind("bind ^I rl_complete")
     else:
         readline.parse_and_bind("tab: complete")
@@ -298,7 +304,8 @@ def test_readline_tab_binding_configured(truckdevil_module_env):
 
 def test_command_preloop_does_not_raise(truckdevil_module_env):
     """Command.preloop() runs without error (sets libedit binding if needed)."""
-    from libs.command import Command
+    from truckdevil.libs.command import Command
+
     cmd_instance = Command()
     # preloop should not raise regardless of readline backend
     cmd_instance.preloop()

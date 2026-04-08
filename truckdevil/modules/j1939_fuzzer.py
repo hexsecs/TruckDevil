@@ -5,9 +5,9 @@ import copy
 import sys
 import dill
 
-from j1939.j1939 import J1939Message, J1939Interface, j1939_fields_to_can_id
-from libs.command import Command
-from libs.settings import SettingsManager, Setting
+from truckdevil.j1939.j1939 import J1939Message, J1939Interface, j1939_fields_to_can_id
+from truckdevil.libs.command import Command
+from truckdevil.libs.settings import SettingsManager, Setting
 
 
 class J1939Fuzzer:
@@ -72,7 +72,9 @@ class J1939Fuzzer:
             if value.startswith("0x"):
                 value = value[2:]
             if len(value) % 2 != 0 or len(value) > 3570:
-                raise ValueError('Length of data must be an even number and shorter than 1785 bytes')
+                raise ValueError(
+                    "Length of data must be an even number and shorter than 1785 bytes"
+                )
             int(value, 16)  # should raise ValueError if not hexadecimal string
             self.__reboot_data_snip = value
 
@@ -88,7 +90,9 @@ class J1939Fuzzer:
                 pgn = self.reboot_pgn
             if self.has_user_set_reboot_data_snip():
                 data_snip = self.reboot_data_snip
-            return "address: {:<3} reboot_pgn: {:<5} reboot_data_snip: {}".format(self.address, pgn, data_snip)
+            return "address: {:<3} reboot_pgn: {:<5} reboot_data_snip: {}".format(
+                self.address, pgn, data_snip
+            )
 
     def __init__(self, device):
         self._targets = []  # Each target should have an optional field to specify what message is sent from the ECU
@@ -105,93 +109,120 @@ class J1939Fuzzer:
 
         self.sm = SettingsManager()
         sl = [
-            Setting("baseline_time", 60).add_constraint("minimum", lambda x: 10 <= x)
-                .add_description("The amount of time to record the baseline for, in seconds."),
-
-            Setting("num_messages", 5000).add_constraint("minimum", lambda x: 1 <= x)
-                .add_description("Number of test cases to generate"),
-
-            Setting("mode", 0).add_constraint("allowed_states", lambda x: 0 <= x <= 2)
-                .add_description("There are 3 modes to create test cases: 0 - mutational, 1 - generational"
-                                 "2 - mutational/generational. "),
-
-            Setting("generate_data_option", 0).add_constraint("allowed_states", lambda x: 0 <= x <= 2)
-                .add_description("When performing generational fuzzing, there are 3 options: 0 - Generate test case "
-                                 "data based on J1939 standard, 1 - Generate test case data randomly with standard "
-                                 "length, 2 - Generate test case data randomly with random length"),
-
-            Setting("check_frequency", 20).add_constraint("minimum", lambda x: 1 <= x)
-                .add_description("how long to wait between analysing for anomalies, in seconds."),
-
-            Setting("message_frequency", 0.5).add_constraint("minimum", lambda x: 0.0 <= x)
-                .add_description("the amount of time to wait between sending each fuzzed message, in seconds."),
-
-            Setting("diff_tolerance", 5).add_constraint("minimum", lambda x: 0 <= x)
-                .add_description(
+            Setting("baseline_time", 60)
+            .add_constraint("minimum", lambda x: 10 <= x)
+            .add_description(
+                "The amount of time to record the baseline for, in seconds."
+            ),
+            Setting("num_messages", 5000)
+            .add_constraint("minimum", lambda x: 1 <= x)
+            .add_description("Number of test cases to generate"),
+            Setting("mode", 0)
+            .add_constraint("allowed_states", lambda x: 0 <= x <= 2)
+            .add_description(
+                "There are 3 modes to create test cases: 0 - mutational, 1 - generational"
+                "2 - mutational/generational. "
+            ),
+            Setting("generate_data_option", 0)
+            .add_constraint("allowed_states", lambda x: 0 <= x <= 2)
+            .add_description(
+                "When performing generational fuzzing, there are 3 options: 0 - Generate test case "
+                "data based on J1939 standard, 1 - Generate test case data randomly with standard "
+                "length, 2 - Generate test case data randomly with random length"
+            ),
+            Setting("check_frequency", 20)
+            .add_constraint("minimum", lambda x: 1 <= x)
+            .add_description(
+                "how long to wait between analysing for anomalies, in seconds."
+            ),
+            Setting("message_frequency", 0.5)
+            .add_constraint("minimum", lambda x: 0.0 <= x)
+            .add_description(
+                "the amount of time to wait between sending each fuzzed message, in seconds."
+            ),
+            Setting("diff_tolerance", 5)
+            .add_constraint("minimum", lambda x: 0 <= x)
+            .add_description(
                 "the acceptable difference in the volume of messages between the "
                 "baseline and the current interval to determine if a crash has occurred. "
-                "A percentage value is expected."),
-
-            Setting("test_case_can_id", 0).add_constraint("range", lambda x: 0 <= x <= 0x1FFFFFFF)
-                .add_description("CAN ID set for each test case."),
-
-            Setting("test_case_priority", 0).add_constraint("range", lambda x: 0 <= x <= 7)
-                .add_description("Priority set for each test case."),
-
-            Setting("test_case_reserved_bit", 0).add_constraint("range", lambda x: 0 <= x <= 1)
-                .add_description("Reserved bit of CAN ID for each test case."),
-
-            Setting("test_case_data_page_bit", 0).add_constraint("range", lambda x: 0 <= x <= 1)
-                .add_description("Data page bit of CAN ID for each test case."),
-
-            Setting("test_case_pdu_format", 0).add_constraint("range", lambda x: 0 <= x <= 255)
-                .add_description("PDU Format byte for each test case. 0-239 for destination specific, 240+ "
-                                 "for broadcast."),
-
-            Setting("test_case_pdu_specific", 0).add_constraint("range", lambda x: 0 <= x <= 255)
-                .add_description("PDU Specific byte for each test case. If PDU Format is 0-239, this is the destination"
-                                 " address. If PDU Format is 240+, this is extension."),
-
-            Setting("test_case_src_address", 0).add_constraint("range", lambda x: 0 <= x <= 255)
-                .add_description("Source address to set for each test case"),
-
+                "A percentage value is expected."
+            ),
+            Setting("test_case_can_id", 0)
+            .add_constraint("range", lambda x: 0 <= x <= 0x1FFFFFFF)
+            .add_description("CAN ID set for each test case."),
+            Setting("test_case_priority", 0)
+            .add_constraint("range", lambda x: 0 <= x <= 7)
+            .add_description("Priority set for each test case."),
+            Setting("test_case_reserved_bit", 0)
+            .add_constraint("range", lambda x: 0 <= x <= 1)
+            .add_description("Reserved bit of CAN ID for each test case."),
+            Setting("test_case_data_page_bit", 0)
+            .add_constraint("range", lambda x: 0 <= x <= 1)
+            .add_description("Data page bit of CAN ID for each test case."),
+            Setting("test_case_pdu_format", 0)
+            .add_constraint("range", lambda x: 0 <= x <= 255)
+            .add_description(
+                "PDU Format byte for each test case. 0-239 for destination specific, 240+ "
+                "for broadcast."
+            ),
+            Setting("test_case_pdu_specific", 0)
+            .add_constraint("range", lambda x: 0 <= x <= 255)
+            .add_description(
+                "PDU Specific byte for each test case. If PDU Format is 0-239, this is the destination"
+                " address. If PDU Format is 240+, this is extension."
+            ),
+            Setting("test_case_src_address", 0)
+            .add_constraint("range", lambda x: 0 <= x <= 255)
+            .add_description("Source address to set for each test case"),
             Setting("test_case_data", "")
-                .add_constraint("max_length", lambda x: len(x) <= (2 * 1785))
-                .add_constraint("even_bytes", lambda x: len(x) % 2 == 0)
-                .add_description("Data to be set for the test case"),
-
-            Setting("mutate_priority", False).add_constraint("boolean", lambda x: type(x) is bool)
-                .add_description("Should the generator mutate the test case priority field?"),
-
-            Setting("mutate_reserved_bit", False).add_constraint("boolean", lambda x: type(x) is bool)
-                .add_description("Should the generator mutate the test case reserved bit field?"),
-
-            Setting("mutate_data_page_bit", False).add_constraint("boolean", lambda x: type(x) is bool)
-                .add_description("Should the generator mutate the test case data page bit field?"),
-
-            Setting("mutate_pdu_format", False).add_constraint("boolean", lambda x: type(x) is bool)
-                .add_description("Should the generator mutate the test case PDU Format field?"),
-
-            Setting("mutate_pdu_specific", False).add_constraint("boolean", lambda x: type(x) is bool)
-                .add_description("Should the generator mutate the test case PDU Specific field?"),
-
-            Setting("mutate_src_address", False).add_constraint("boolean", lambda x: type(x) is bool)
-                .add_description("Should the generator mutate the source address?"),
-
-            Setting("mutate_data", False).add_constraint("boolean", lambda x: type(x) is bool)
-                .add_description("Should the generator mutate the data field?"),
-
-            Setting("mutate_data_length", False).add_constraint("boolean", lambda x: type(x) is bool)
-                .add_description("Should the generator mutate the length of the data field?"),
-
-            Setting("carry_on", False).add_constraint("boolean", lambda x: type(x) is bool)
-                .add_description("Should the fuzzer skip waiting for you to reset the ECU and just carry on fuzzing?"),
+            .add_constraint("max_length", lambda x: len(x) <= (2 * 1785))
+            .add_constraint("even_bytes", lambda x: len(x) % 2 == 0)
+            .add_description("Data to be set for the test case"),
+            Setting("mutate_priority", False)
+            .add_constraint("boolean", lambda x: type(x) is bool)
+            .add_description(
+                "Should the generator mutate the test case priority field?"
+            ),
+            Setting("mutate_reserved_bit", False)
+            .add_constraint("boolean", lambda x: type(x) is bool)
+            .add_description(
+                "Should the generator mutate the test case reserved bit field?"
+            ),
+            Setting("mutate_data_page_bit", False)
+            .add_constraint("boolean", lambda x: type(x) is bool)
+            .add_description(
+                "Should the generator mutate the test case data page bit field?"
+            ),
+            Setting("mutate_pdu_format", False)
+            .add_constraint("boolean", lambda x: type(x) is bool)
+            .add_description(
+                "Should the generator mutate the test case PDU Format field?"
+            ),
+            Setting("mutate_pdu_specific", False)
+            .add_constraint("boolean", lambda x: type(x) is bool)
+            .add_description(
+                "Should the generator mutate the test case PDU Specific field?"
+            ),
+            Setting("mutate_src_address", False)
+            .add_constraint("boolean", lambda x: type(x) is bool)
+            .add_description("Should the generator mutate the source address?"),
+            Setting("mutate_data", False)
+            .add_constraint("boolean", lambda x: type(x) is bool)
+            .add_description("Should the generator mutate the data field?"),
+            Setting("mutate_data_length", False)
+            .add_constraint("boolean", lambda x: type(x) is bool)
+            .add_description(
+                "Should the generator mutate the length of the data field?"
+            ),
+            Setting("carry_on", False)
+            .add_constraint("boolean", lambda x: type(x) is bool)
+            .add_description(
+                "Should the fuzzer skip waiting for you to reset the ECU and just carry on fuzzing?"
+            ),
         ]
 
         for setting in sl:
             self.sm.add_setting(setting)
-
-
 
     @property
     def targets(self):
@@ -235,7 +266,7 @@ class J1939Fuzzer:
         for idx, t in enumerate(self._targets):
             if t.address == address:
                 tmp = self._targets[:idx]
-                tmp.extend(self._targets[idx + 1:])
+                tmp.extend(self._targets[idx + 1 :])
                 self._targets = tmp
 
     def modify_target(self, address, pgn, data):
@@ -256,9 +287,18 @@ class J1939Fuzzer:
             if t.address == address:
                 self._targets[idx] = self.Target(address, pgn, data)
 
-    def mutate(self, message: J1939Message, mutate_priority=False, mutate_reserved_bit=False,
-               mutate_data_page_bit=False, mutate_pdu_format=False, mutate_pdu_specific=False, mutate_src_addr=False,
-               mutate_data=False, mutate_data_length=False) -> J1939Message:
+    def mutate(
+        self,
+        message: J1939Message,
+        mutate_priority=False,
+        mutate_reserved_bit=False,
+        mutate_data_page_bit=False,
+        mutate_pdu_format=False,
+        mutate_pdu_specific=False,
+        mutate_src_addr=False,
+        mutate_data=False,
+        mutate_data_length=False,
+    ) -> J1939Message:
         """
         Given a J1939_Message, mutate different parts of it randomly depending on the arguments
 
@@ -295,12 +335,16 @@ class J1939Fuzzer:
             for i in range(0, num_bytes_to_mutate):
                 byte_to_mutate = random.randint(0, message_data_bytes - 1)
                 data_byte = hex(random.randint(0, 255))[2:].zfill(2)
-                message.data = message.data[0:byte_to_mutate * 2] + data_byte + message.data[byte_to_mutate * 2 + 2:]
+                message.data = (
+                    message.data[0 : byte_to_mutate * 2]
+                    + data_byte
+                    + message.data[byte_to_mutate * 2 + 2 :]
+                )
         if mutate_data_length:
             shorter = random.randint(0, 1)
             if shorter:
                 num_bytes = random.randint(0, message_data_bytes - 1)
-                message.data = message.data[0:num_bytes * 2]
+                message.data = message.data[0 : num_bytes * 2]
             else:
                 num_bytes_added = random.randint(1, 1785 - message_data_bytes)
                 for i in range(0, num_bytes_added + 1):
@@ -334,8 +378,12 @@ class J1939Fuzzer:
         can_id = test_case_values.setdefault("can_id", None)
         if can_id is None:
             priority = test_case_values.setdefault("priority", random.randint(0, 7))
-            reserved_bit = test_case_values.setdefault("reserved_bit", random.randint(0, 1))
-            data_page_bit = test_case_values.setdefault("data_page_bit", random.randint(0, 1))
+            reserved_bit = test_case_values.setdefault(
+                "reserved_bit", random.randint(0, 1)
+            )
+            data_page_bit = test_case_values.setdefault(
+                "data_page_bit", random.randint(0, 1)
+            )
             src_addr = test_case_values.setdefault("src_addr", random.randint(0, 255))
             pdu_format = test_case_values.setdefault("pdu_format", None)
             if pdu_format is None:
@@ -344,14 +392,23 @@ class J1939Fuzzer:
                     pdu_format = random.randint(0, 239)
                 else:
                     pdu_format = random.randint(240, 255)
-            pdu_specific = test_case_values.setdefault("pdu_specific", random.randint(0, 255))
+            pdu_specific = test_case_values.setdefault(
+                "pdu_specific", random.randint(0, 255)
+            )
 
             if pdu_format < 240:
                 pgn = pdu_format << 8
             else:
                 pgn = (pdu_format << 8) + pdu_specific
 
-            can_id = j1939_fields_to_can_id(priority, reserved_bit, data_page_bit, pdu_format, pdu_specific, src_addr)
+            can_id = j1939_fields_to_can_id(
+                priority,
+                reserved_bit,
+                data_page_bit,
+                pdu_format,
+                pdu_specific,
+                src_addr,
+            )
         else:
             pgn = can_id >> 8 & 0xFFFF
             if pgn < 0xF000:
@@ -364,46 +421,54 @@ class J1939Fuzzer:
             if not (0 <= option <= 2):
                 option = random.randint(0, 2)
             if option == 0:
-                data = ''
+                data = ""
                 try:
                     pgn_info = self.devil.pgn_list[str(pgn)]
-                    if isinstance(pgn_info['pgnDataLength'], int):
-                        data_len = pgn_info['pgnDataLength']
+                    if isinstance(pgn_info["pgnDataLength"], int):
+                        data_len = pgn_info["pgnDataLength"]
                     else:
                         raise KeyError
-                    spn_list = pgn_info['spnList']
-                    bin_data = ''
+                    spn_list = pgn_info["spnList"]
+                    bin_data = ""
                     used_bits = 0
                     for spn in spn_list:
                         spn_info = self.devil.spn_list[str(spn)]
-                        if isinstance(spn_info['spnLength'], int):
-                            spn_length = spn_info['spnLength']  # number of bits
+                        if isinstance(spn_info["spnLength"], int):
+                            spn_length = spn_info["spnLength"]  # number of bits
                         else:
                             raise KeyError  # length is variable
-                        max_val = (2 ** spn_length) - 1  # maximum int value for x number of bits (ex: 255 for 8 bits)
+                        max_val = (
+                            (2**spn_length) - 1
+                        )  # maximum int value for x number of bits (ex: 255 for 8 bits)
 
                         val = random.randint(0, max_val)
                         bin_val = bin(val)[2:].zfill(spn_length)
                         bin_data = bin_data + bin_val
                         used_bits += spn_length
-                        if spn_info['bitPositionStart'] > used_bits:
-                            filler = (spn_info['bitPositionStart'] - used_bits) * '1'
+                        if spn_info["bitPositionStart"] > used_bits:
+                            filler = (spn_info["bitPositionStart"] - used_bits) * "1"
                             bin_data = bin_data + filler
                             used_bits += len(filler)
-                    bits_left = (data_len * 8 - used_bits) * '1'
+                    bits_left = (data_len * 8 - used_bits) * "1"
                     if len(bits_left) > 0:
-                        data = (hex(int(bin_data + bits_left, 2))[2:].zfill(data_len * 2)).upper()
+                        data = (
+                            hex(int(bin_data + bits_left, 2))[2:].zfill(data_len * 2)
+                        ).upper()
                     else:
-                        data = (hex(int(bin_data, 2))[2:].zfill(int(len(bin_data) / 4))).upper()
+                        data = (
+                            hex(int(bin_data, 2))[2:].zfill(int(len(bin_data) / 4))
+                        ).upper()
                 except KeyError:
                     option = 1
             if option == 1:
                 try:
                     pgn_info = self.devil.pgn_list[str(pgn)]
-                    if isinstance(pgn_info['pgnDataLength'], int):
-                        data_len = pgn_info['pgnDataLength']  # number of bytes to generate is based on data length
+                    if isinstance(pgn_info["pgnDataLength"], int):
+                        data_len = pgn_info[
+                            "pgnDataLength"
+                        ]  # number of bytes to generate is based on data length
                         # specified in pgn
-                        data = ''
+                        data = ""
                         for i in range(0, data_len):
                             data_byte = hex(random.randint(0, 255))[2:].zfill(2)
                             data += data_byte
@@ -417,7 +482,7 @@ class J1939Fuzzer:
                     data_len = random.randint(9, 1785)  # number of bytes to generate
                 else:
                     data_len = random.randint(0, 8)  # number of bytes to generate
-                data = ''
+                data = ""
                 for i in range(0, data_len):
                     data_byte = hex(random.randint(0, 255))[2:].zfill(2)
                     data += data_byte
@@ -443,34 +508,48 @@ class J1939Fuzzer:
             any_anomalies = False
             after_fuzz = []
             for x in range(256):
-                node = {'total_messages': 0, 'pgns': {}, 'boot_msg_found': False}
+                node = {"total_messages": 0, "pgns": {}, "boot_msg_found": False}
                 after_fuzz.append(node)
             for m in incoming_messages:
-                after_fuzz[m.src_addr]['total_messages'] += 1
+                after_fuzz[m.src_addr]["total_messages"] += 1
                 # TODO: maybe get rid of the collection pgns?
-                if m.pgn not in after_fuzz[m.src_addr]['pgns']:
-                    after_fuzz[m.src_addr]['pgns'][m.pgn] = 1
+                if m.pgn not in after_fuzz[m.src_addr]["pgns"]:
+                    after_fuzz[m.src_addr]["pgns"][m.pgn] = 1
                 else:
-                    after_fuzz[m.src_addr]['pgns'][m.pgn] += 1
+                    after_fuzz[m.src_addr]["pgns"][m.pgn] += 1
                 if len(self.targets) > 0:
                     for t in self.targets:
                         if t.address == m.src_addr:
-                            if t.has_user_set_reboot_pgn() and t.has_user_set_reboot_data_snip():
-                                if t.reboot_pgn == m.pgn and t.reboot_data_snip in m.data:
-                                    after_fuzz[m.src_addr]['boot_msg_found'] = True
+                            if (
+                                t.has_user_set_reboot_pgn()
+                                and t.has_user_set_reboot_data_snip()
+                            ):
+                                if (
+                                    t.reboot_pgn == m.pgn
+                                    and t.reboot_data_snip in m.data
+                                ):
+                                    after_fuzz[m.src_addr]["boot_msg_found"] = True
                             elif t.has_user_set_reboot_pgn():
                                 if t.reboot_pgn == m.pgn:
-                                    after_fuzz[m.src_addr]['boot_msg_found'] = True
+                                    after_fuzz[m.src_addr]["boot_msg_found"] = True
                             elif t.has_user_set_reboot_data_snip():
                                 if t.reboot_data_snip in m.data:
-                                    after_fuzz[m.src_addr]['boot_msg_found'] = True
-            addresses = [t.address for t in self.targets] if len(self.targets) != 0 else list(range(0, 256))
+                                    after_fuzz[m.src_addr]["boot_msg_found"] = True
+            addresses = (
+                [t.address for t in self.targets]
+                if len(self.targets) != 0
+                else list(range(0, 256))
+            )
             for src in addresses:
                 anomaly = False
                 message = ""
-                base_per_sec = self.baseline[src]['total_messages'] / self.sm.baseline_time
-                curr_per_sec = after_fuzz[src]['total_messages'] / self.sm.check_frequency
-                if after_fuzz[src]['boot_msg_found']:
+                base_per_sec = (
+                    self.baseline[src]["total_messages"] / self.sm.baseline_time
+                )
+                curr_per_sec = (
+                    after_fuzz[src]["total_messages"] / self.sm.check_frequency
+                )
+                if after_fuzz[src]["boot_msg_found"]:
                     anomaly = True
                     any_anomalies = True
                     message = "targets reboot message was detected."
@@ -479,40 +558,86 @@ class J1939Fuzzer:
                     any_anomalies = True
                     message = "The baseline had messages for this node, but this interval did not."
                 elif curr_per_sec > 0:
-                    percent_diff = ((abs(base_per_sec - curr_per_sec)) / ((base_per_sec + curr_per_sec) / 2)) * 100
+                    percent_diff = (
+                        (abs(base_per_sec - curr_per_sec))
+                        / ((base_per_sec + curr_per_sec) / 2)
+                    ) * 100
                     if percent_diff > self.sm.diff_tolerance:
                         anomaly = True
                         any_anomalies = True
-                        message = "Number of messages changed by " + "{:.2f}".format(percent_diff) + "%"
-                elif any([x not in self.baseline[src]['pgns'].keys() for x in after_fuzz[src]['pgns']]):
+                        message = (
+                            "Number of messages changed by "
+                            + "{:.2f}".format(percent_diff)
+                            + "%"
+                        )
+                elif any(
+                    [
+                        x not in self.baseline[src]["pgns"].keys()
+                        for x in after_fuzz[src]["pgns"]
+                    ]
+                ):
                     anomaly = True
                     any_anomalies = True
                     message = "new PGNs detected from target: " + str(
-                            set(after_fuzz[src]['pgns'].keys()) - set(self.baseline[src]['pgns']))
+                        set(after_fuzz[src]["pgns"].keys())
+                        - set(self.baseline[src]["pgns"])
+                    )
                 if anomaly:
                     print("\n    source: " + str(src))
                     print("        interval messages/second: " + str(curr_per_sec))
-                    print("        interval pgns sent to: " + str(after_fuzz[src]['pgns']))
+                    print(
+                        "        interval pgns sent to: " + str(after_fuzz[src]["pgns"])
+                    )
                     print("        baseline messages/second: " + str(base_per_sec))
-                    print("        baseline pgns sent to: " + str(self.baseline[src]['pgns']))
+                    print(
+                        "        baseline pgns sent to: "
+                        + str(self.baseline[src]["pgns"])
+                    )
                     print("        Reason: " + message)
 
             if any_anomalies:
                 self.pause_fuzzing = True
                 num_crashes = num_crashes + 1
-                filename_previous = "crashReport_" + str(int(start_time)) + "_previous_" + str(num_crashes)
-                filename_current = "crashReport_" + str(int(start_time)) + "_current_" + str(num_crashes)
+                filename_previous = (
+                    "crashReport_"
+                    + str(int(start_time))
+                    + "_previous_"
+                    + str(num_crashes)
+                )
+                filename_current = (
+                    "crashReport_"
+                    + str(int(start_time))
+                    + "_current_"
+                    + str(num_crashes)
+                )
                 if len(previous_interval_messages) > 0:
-                    print("    Stored previous interval fuzzed messages to: " + filename_previous)
-                    self.devil.save_data_collected(previous_interval_messages, filename_previous, False)
-                print("    Stored current interval fuzzed messages to: " + filename_current)
-                self.devil.save_data_collected(self.fuzzed_messages, filename_current, False)
+                    print(
+                        "    Stored previous interval fuzzed messages to: "
+                        + filename_previous
+                    )
+                    self.devil.save_data_collected(
+                        previous_interval_messages, filename_previous, False
+                    )
+                print(
+                    "    Stored current interval fuzzed messages to: "
+                    + filename_current
+                )
+                self.devil.save_data_collected(
+                    self.fuzzed_messages, filename_current, False
+                )
 
                 val = "yes"
                 if not self.sm.carry_on:
-                    val = input("Please restart the ECU. Once complete, enter 'y' to continue / 'q' to quit fuzzing: ")
+                    try:
+                        val = input(
+                            "Please restart the ECU. Once complete, enter 'y' to continue / 'q' to quit fuzzing: "
+                        )
+                    except (EOFError, OSError):
+                        self.done_fuzzing = True
+                        self.pause_fuzzing = False
+                        return
                 else:
-                    time.sleep(1.)
+                    time.sleep(1.0)
                 if val.lower() == "yes" or val.lower() == "y":
                     self.pause_fuzzing = False
                 elif val.lower() == "quit" or val.lower() == "q":
@@ -540,13 +665,13 @@ class J1939Fuzzer:
                 else:
                     if self.sm["test_case_priority"].updated:
                         m.priority = self.sm.test_case_priority
-                    if self.sm['test_case_reserved_bit'].updated:
+                    if self.sm["test_case_reserved_bit"].updated:
                         m.reserved_bit = self.sm.test_case_reserved_bit
-                    if self.sm['test_case_data_page_bit'].updated:
+                    if self.sm["test_case_data_page_bit"].updated:
                         m.data_page_bit = self.sm.test_case_data_page_bit
-                    if self.sm['test_case_pdu_format'].updated:
+                    if self.sm["test_case_pdu_format"].updated:
                         m.pdu_format = self.sm.test_case_pdu_format
-                    if self.sm['test_case_pdu_specific'].updated:
+                    if self.sm["test_case_pdu_specific"].updated:
                         m.pdu_specific = self.sm.test_case_pdu_specific
                     if self.sm["test_case_src_address"].updated:
                         m.src_addr = self.sm.test_case_src_address
@@ -559,15 +684,17 @@ class J1939Fuzzer:
                 #    m.dst_addr = target_addr
                 #    mutate_pdu_specific = False
 
-                m = self.mutate(m,
-                                self.sm.mutate_priority,
-                                self.sm.mutate_reserved_bit,
-                                self.sm.mutate_data_page_bit,
-                                self.sm.mutate_pdu_format,
-                                self.sm.mutate_pdu_specific,
-                                self.sm.mutate_src_address,
-                                self.sm.mutate_data,
-                                self.sm.mutate_data_length)
+                m = self.mutate(
+                    m,
+                    self.sm.mutate_priority,
+                    self.sm.mutate_reserved_bit,
+                    self.sm.mutate_data_page_bit,
+                    self.sm.mutate_pdu_format,
+                    self.sm.mutate_pdu_specific,
+                    self.sm.mutate_src_address,
+                    self.sm.mutate_data,
+                    self.sm.mutate_data_length,
+                )
 
             # generate a message
             elif choice == 1:
@@ -578,21 +705,29 @@ class J1939Fuzzer:
                     if self.sm["test_case_priority"].updated:
                         test_case_values["priority"] = self.sm.test_case_priority
                     if self.sm["test_case_reserved_bit"].updated:
-                        test_case_values["reserved_bit"] = self.sm.test_case_reserved_bit
+                        test_case_values["reserved_bit"] = (
+                            self.sm.test_case_reserved_bit
+                        )
                     if self.sm["test_case_data_page_bit"].updated:
-                        test_case_values["data_page_bit"] = self.sm.test_case_data_page_bit
+                        test_case_values["data_page_bit"] = (
+                            self.sm.test_case_data_page_bit
+                        )
                     if self.sm["test_case_pdu_format"].updated:
                         test_case_values["pdu_format"] = self.sm.test_case_pdu_format
                     if self.sm["test_case_pdu_specific"].updated:
-                        test_case_values["pdu_specific"] = self.sm.test_case_pdu_specific
+                        test_case_values["pdu_specific"] = (
+                            self.sm.test_case_pdu_specific
+                        )
                     if self.sm["test_case_src_address"].updated:
                         test_case_values["src_addr"] = self.sm.test_case_src_address
                 if self.sm["test_case_data"].updated:
                     test_case_values["data"] = self.sm.test_case_data
-                #if len(self.targets) > 0:
+                # if len(self.targets) > 0:
                 #    which = random.randint(0, len(self.targets) - 1)
                 #    test_case_values["dst_addr"] = self.targets[which].address
-                m = self.generate(option=self.sm.generate_data_option, **test_case_values)
+                m = self.generate(
+                    option=self.sm.generate_data_option, **test_case_values
+                )
             self.test_cases.append(m)
         return
 
@@ -608,14 +743,14 @@ class J1939Fuzzer:
 
         self.baseline = []
         for i in range(256):
-            node = {'total_messages': 0, 'pgns': {}}
+            node = {"total_messages": 0, "pgns": {}}
             self.baseline.append(node)
         for m in self.baseline_messages:
-            self.baseline[m.src_addr]['total_messages'] += 1
-            if m.pgn not in self.baseline[m.src_addr]['pgns']:
-                self.baseline[m.src_addr]['pgns'][m.pgn] = 1
+            self.baseline[m.src_addr]["total_messages"] += 1
+            if m.pgn not in self.baseline[m.src_addr]["pgns"]:
+                self.baseline[m.src_addr]["pgns"][m.pgn] = 1
             else:
-                self.baseline[m.src_addr]['pgns'][m.pgn] += 1
+                self.baseline[m.src_addr]["pgns"][m.pgn] += 1
         print("Baselining complete.")
 
 
@@ -689,7 +824,10 @@ class FuzzerCommands(Command):
             dill.dump(self.fz.test_cases, f)
             print("test cases saved to {}".format(file_name))
         elif selection == "baseline":
-            dill.dump([self.fz.sm.baseline_time, self.fz.baseline, self.fz.baseline_messages], f)
+            dill.dump(
+                [self.fz.sm.baseline_time, self.fz.baseline, self.fz.baseline_messages],
+                f,
+            )
             print("baseline data saved to {}".format(file_name))
 
     def do_load(self, arg):
@@ -814,8 +952,10 @@ class FuzzerCommands(Command):
             return
 
         if len(argv) <= 1:
-            print("address expected:\n"
-                  "\tusage: target <(add, modify, remove)> <address> [PGN [REBOOTDATA]]")
+            print(
+                "address expected:\n"
+                "\tusage: target <(add, modify, remove)> <address> [PGN [REBOOTDATA]]"
+            )
             return
 
         if "remove" == argv[0]:
@@ -864,9 +1004,15 @@ class FuzzerCommands(Command):
         if len(self.fz.baseline_messages) == 0:
             print("No baseline has been recorded yet. See the record_baseline command.")
         print(
-            "Recorded {:<6} messages in {:<6} seconds".format(len(self.fz.baseline_messages), self.fz.sm.baseline_time))
-        print("Baseline time: {:<6} messages per second".format(
-            len(self.fz.baseline_messages) / self.fz.sm.baseline_time))
+            "Recorded {:<6} messages in {:<6} seconds".format(
+                len(self.fz.baseline_messages), self.fz.sm.baseline_time
+            )
+        )
+        print(
+            "Baseline time: {:<6} messages per second".format(
+                len(self.fz.baseline_messages) / self.fz.sm.baseline_time
+            )
+        )
 
     def do_generate_test_cases(self, arg):
         """
@@ -895,7 +1041,9 @@ class FuzzerCommands(Command):
         self.fz.fuzzed_messages = []
         self.fz.lock_fuzzed_messages = threading.RLock()
 
-        anomaly_check_thread = threading.Thread(target=self.fz.anomaly_check, daemon=False)
+        anomaly_check_thread = threading.Thread(
+            target=self.fz.anomaly_check, daemon=False
+        )
         anomaly_check_thread.start()
 
         try:
@@ -913,6 +1061,8 @@ class FuzzerCommands(Command):
             self.fz.done_fuzzing = True
         except KeyboardInterrupt:
             self.fz.done_fuzzing = True
+
+        anomaly_check_thread.join()
 
         return
 

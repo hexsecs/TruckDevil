@@ -1,21 +1,36 @@
 import cmd
 import importlib
+import importlib.util
 import os
 import sys
 from pkgutil import iter_modules
 
-from libs.device import Device
-from __init__ import __version__
+if __package__ in (None, ""):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+
+def _load_version():
+    spec = importlib.util.spec_from_file_location(
+        "truckdevil_init", os.path.join(os.path.dirname(__file__), "__init__.py")
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.__version__
+
+
+__version__ = _load_version()
 
 
 class FrameworkCommands(cmd.Cmd):
-    intro = "Welcome to the truckdevil framework v{}. Type 'help or ?' for a list of commands.".format(__version__)
-    prompt = '(truckdevil) '
+    intro = "Welcome to the truckdevil framework v{}. Type 'help or ?' for a list of commands.".format(
+        __version__
+    )
+    prompt = "(truckdevil) "
 
     def __init__(self):
         super().__init__()
         self._device = None
-        module_path = os.path.join(os.path.dirname(__file__), 'modules')
+        module_path = os.path.join(os.path.dirname(__file__), "modules")
         self.module_names = [name for _, name, _ in iter_modules([module_path])]
 
     @property
@@ -67,6 +82,8 @@ class FrameworkCommands(cmd.Cmd):
         serial_port = None
         if len(argv) >= 4:
             serial_port = argv[3]
+        from truckdevil.libs.device import Device
+
         self.device = Device(interface, serial_port, channel, can_baud)
 
     def do_list_modules(self, args):
@@ -80,7 +97,7 @@ class FrameworkCommands(cmd.Cmd):
         """
         alias 'ls' to 'list_modules'
         """
-        self.do_list_modules(args) 
+        self.do_list_modules(args)
 
     def do_run_module(self, args):
         """
@@ -99,18 +116,17 @@ class FrameworkCommands(cmd.Cmd):
             return
         module_name = argv[0]
         if module_name in self.module_names:
-            mod = importlib.import_module("modules.{}".format(module_name))
+            mod = importlib.import_module("truckdevil.modules.{}".format(module_name))
             mod.main_mod(argv[1:], self.device)
         else:
             print("Error: module not found")
             self.do_help("run_module")
 
-
     def do_use(self, args):
         """
         alias 'use' to 'run_module'
         """
-        self.do_run_module(args) 
+        self.do_run_module(args)
 
     def do_quit(self, args):
         """
@@ -119,13 +135,14 @@ class FrameworkCommands(cmd.Cmd):
         the entire TruckDevil REPL immediately.
         """
         sys.exit("Exiting TruckDevil")
-            
+
     def complete_add_device(self, text, line, begidx, endidx):
         import can
-        interfaces = ['m2']
-        if hasattr(can, 'VALID_INTERFACES'):
+
+        interfaces = ["m2"]
+        if hasattr(can, "VALID_INTERFACES"):
             interfaces.extend(can.VALID_INTERFACES)
-        elif hasattr(can.interface, 'VALID_INTERFACES'):
+        elif hasattr(can.interface, "VALID_INTERFACES"):
             interfaces.extend(can.interface.VALID_INTERFACES)
 
         interfaces = sorted(list(set(interfaces)))
@@ -143,52 +160,59 @@ class FrameworkCommands(cmd.Cmd):
             if not text:
                 completions = self.module_names[:]
             else:
-                completions = [ f
-                                for f in self.module_names
-                                if f.startswith(text)
-                                ]
+                completions = [f for f in self.module_names if f.startswith(text)]
             return completions
         return []
 
     def complete_use(self, text, line, begidx, endidx):
         return self.complete_run_module(text, line, begidx, endidx)
 
-if __name__ == "__main__":
-    if "--version" in sys.argv or "-V" in sys.argv:
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+
+    if "--version" in argv or "-V" in argv:
         print("truckdevil {}".format(__version__))
-        sys.exit(0)
+        return 0
 
     try:
         import readline
+
         # libedit (macOS / some BSDs) uses a different binding syntax;
         # GNU readline's "tab: complete" is silently ignored by libedit.
         # Setting the correct binding here ensures tab-completion works
         # regardless of the backend (cmd.Cmd.cmdloop only uses GNU syntax).
-        if getattr(readline, '__doc__', None) and 'libedit' in readline.__doc__:
+        if getattr(readline, "__doc__", None) and "libedit" in readline.__doc__:
             readline.parse_and_bind("bind ^I rl_complete")
         else:
             readline.parse_and_bind("tab: complete")
     except ImportError:
         print("Warning: readline not found. Tab-completion will not work.")
-        if sys.platform == 'win32':
+        if sys.platform == "win32":
             print("  Install it with:  pip install pyreadline3")
         else:
             print("  On Debian/Ubuntu:  sudo apt install libreadline-dev")
             print("  Then rebuild Python or:  pip install gnureadline")
 
     fc = FrameworkCommands()
-    if len(sys.argv) > 1:
-        if sys.argv[1] == "add_device" and "run_module" in sys.argv:
-            module_index = sys.argv[1:].index("run_module")
-            device_args = sys.argv[1:][:module_index]
-            module_args = sys.argv[module_index + 1:]
-            fc.onecmd(' '.join(device_args))
-            fc.onecmd(' '.join(module_args))
-        elif sys.argv[1] == "add_device" and not "run_module" in sys.argv:
-            fc.onecmd(' '.join(sys.argv[1:6]))
-            fc.onecmd(' '.join(sys.argv[6:]))
+    if len(argv) > 0:
+        if argv[0] == "add_device" and "run_module" in argv:
+            module_index = argv.index("run_module")
+            device_args = argv[:module_index]
+            module_args = argv[module_index + 1 :]
+            fc.onecmd(" ".join(device_args))
+            fc.onecmd(" ".join(module_args))
+        elif argv[0] == "add_device" and "run_module" not in argv:
+            fc.onecmd(" ".join(argv[:5]))
+            fc.onecmd(" ".join(argv[5:]))
             fc.cmdloop()
         else:
-            fc.onecmd(' '.join(sys.argv[1:]))
+            fc.onecmd(" ".join(argv))
     else:
         fc.cmdloop()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
