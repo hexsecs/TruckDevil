@@ -7,7 +7,7 @@ name = "truckdevil"
 version = "1.2.0"
 description = "J1939 testing framework"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "GPL-3.0-or-later"
 authors = [
   {name = "Hannah Silva"},

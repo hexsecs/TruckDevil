@@ -1,2 +1,3 @@
 include README.md
+recursive-include truckdevil *.py
 recursive-include truckdevil/resources/json_files *.json

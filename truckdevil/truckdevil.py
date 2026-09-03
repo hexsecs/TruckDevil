@@ -105,7 +105,11 @@ def _run_module_entry(module, argv, device):
     if callable(module):
         module(argv, device)
         return
-    raise AttributeError("module is missing main_mod")
+    raise AttributeError(
+        "module is missing main_mod: plugins must be either an entry-point "
+        "callable accepting (argv, device), or an object/module exposing a "
+        "main_mod(argv, device) function"
+    )
 
 
 def _parse_cli_args(argv):
